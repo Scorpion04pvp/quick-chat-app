@@ -1,12 +1,14 @@
-// ================= ONYX CHAT - CLIENT LOGIC =================
+// ================= ONYX CHAT - INSTAGRAM EDITION CLIENT LOGIC =================
 
 let currentUser = null;
 let activeRecipient = null;
 let socket = null;
 let currentTab = 'contacts';
-let currentView = 'chats';
+let currentView = 'home';
 let contacts = [];
+let postsData = [];
 let reelsData = [];
+let storiesData = [];
 let currentLang = 'ar';
 
 // Call state
@@ -25,40 +27,9 @@ let isRecordingCancelled = false;
 let currentlyPlayingAudio = null;
 let currentlyPlayingBtn = null;
 
-// i18n Dictionary
-const translations = {
-  ar: {
-    authSubtitle: 'محادثات راقية مشفرة، مكالمات، وريلز فيديو',
-    tabLogin: 'تسجيل الدخول',
-    tabRegister: 'إنشاء حساب جديد',
-    labelUsernameOrContact: 'اسم المستخدم / الجيمايل / الهاتف:',
-    labelPassword: 'كلمة المرور:',
-    btnLogin: 'دخول إلى ONYX CHAT',
-    navChats: 'المحادثات',
-    navReels: 'الريلز (Reels)',
-    navProfile: 'ملفي الشخصي',
-    addFriendBtn: 'إضافة صديق برمز المعرف',
-    tabContacts: 'جهات الاتصال',
-    tabGlobal: 'الغرفة العامة'
-  },
-  en: {
-    authSubtitle: 'Encrypted luxury chats, audio/video calls, and video reels',
-    tabLogin: 'Sign In',
-    tabRegister: 'Create Account',
-    labelUsernameOrContact: 'Username / Gmail / Phone:',
-    labelPassword: 'Password:',
-    btnLogin: 'Enter ONYX CHAT',
-    navChats: 'Chats',
-    navReels: 'Reels',
-    navProfile: 'My Profile',
-    addFriendBtn: 'Add Friend by User ID',
-    tabContacts: 'Contacts',
-    tabGlobal: 'Public Lounge'
-  }
-};
-
 // DOM Elements
 const authModal = document.getElementById('authModal');
+const googleSignInBtn = document.getElementById('googleSignInBtn');
 const tabLoginBtn = document.getElementById('tabLoginBtn');
 const tabRegisterBtn = document.getElementById('tabRegisterBtn');
 const loginForm = document.getElementById('loginForm');
@@ -95,29 +66,55 @@ const codeNotificationToast = document.getElementById('codeNotificationToast');
 const toastCode = document.getElementById('toastCode');
 const toastCopyBtn = document.getElementById('toastCopyBtn');
 
-// Nav tabs & Views
-const navTabs = document.querySelectorAll('.nav-tab');
-const chatsView = document.getElementById('chatsView');
-const reelsView = document.getElementById('reelsView');
-const profileView = document.getElementById('profileView');
-const brandHomeBtn = document.getElementById('brandHomeBtn');
+// Navigation & Views
+const bottomNavBtns = document.querySelectorAll('.bnav-btn');
+const viewHome = document.getElementById('viewHome');
+const viewExplore = document.getElementById('viewExplore');
+const viewCreate = document.getElementById('viewCreate');
+const viewReels = document.getElementById('viewReels');
+const viewDirect = document.getElementById('viewDirect');
+const viewProfile = document.getElementById('viewProfile');
+
+const logoHomeBtn = document.getElementById('logoHomeBtn');
+const headerCreateBtn = document.getElementById('headerCreateBtn');
+const headerDirectBtn = document.getElementById('headerDirectBtn');
 const langToggleBtn = document.getElementById('langToggleBtn');
 const currentLangLabel = document.getElementById('currentLangLabel');
+const bnavAvatar = document.getElementById('bnavAvatar');
 
-// Chats View Elements
-const sidebar = document.getElementById('sidebar');
-const currentUserAvatar = document.getElementById('currentUserAvatar');
-const currentUserName = document.getElementById('currentUserName');
-const currentUserTag = document.getElementById('currentUserTag');
-const openProfileFromSidebar = document.getElementById('openProfileFromSidebar');
-const logoutBtn = document.getElementById('logoutBtn');
-const openAddContactBtn = document.getElementById('openAddContactBtn');
+// Home Feed Elements
+const storiesList = document.getElementById('storiesList');
+const myStoryAvatar = document.getElementById('myStoryAvatar');
+const addMyStoryBtn = document.getElementById('addMyStoryBtn');
+const postsFeed = document.getElementById('postsFeed');
+
+// Explore Elements
+const exploreSearchInput = document.getElementById('exploreSearchInput');
+const exploreSearchBtn = document.getElementById('exploreSearchBtn');
+const searchResultCard = document.getElementById('searchResultCard');
+const exploreGrid = document.getElementById('exploreGrid');
+
+// Create Elements
+const createTabBtns = document.querySelectorAll('.create-tab-btn');
+const createUploadDropzone = document.getElementById('createUploadDropzone');
+const createFileInput = document.getElementById('createFileInput');
+const createUploadFileName = document.getElementById('createUploadFileName');
+const createCaptionInput = document.getElementById('createCaptionInput');
+const captionGroup = document.getElementById('captionGroup');
+const submitCreateBtn = document.getElementById('submitCreateBtn');
+let createType = 'post'; // 'post' | 'reel' | 'story'
+
+// Reels Elements
+const reelsFeed = document.getElementById('reelsFeed');
+
+// Direct Elements
+const directSidebar = document.getElementById('directSidebar');
+const directHeaderUsername = document.getElementById('directHeaderUsername');
+const directAddFriendBtn = document.getElementById('directAddFriendBtn');
+const directBackToSidebar = document.getElementById('directBackToSidebar');
 const contactsList = document.getElementById('contactsList');
-const tabBtns = document.querySelectorAll('.chat-tabs .tab-btn');
+const chatTabs = document.querySelectorAll('.chat-tabs .tab-btn');
 
-const chatArea = document.getElementById('chatArea');
-const chatHeaderContactInfo = document.getElementById('chatHeaderContactInfo');
-const backToSidebarBtn = document.getElementById('backToSidebarBtn');
 const activeChatAvatar = document.getElementById('activeChatAvatar');
 const activeChatName = document.getElementById('activeChatName');
 const activeChatStatus = document.getElementById('activeChatStatus');
@@ -146,10 +143,38 @@ const recordingTimer = document.getElementById('recordingTimer');
 const cancelRecordBtn = document.getElementById('cancelRecordBtn');
 const sendRecordBtn = document.getElementById('sendRecordBtn');
 
-// Lightbox
-const lightbox = document.getElementById('lightbox');
-const lightboxImg = document.getElementById('lightboxImg');
-const closeLightbox = document.getElementById('closeLightbox');
+// Profile Elements
+const fullProfileAvatar = document.getElementById('fullProfileAvatar');
+const changeFullProfileAvatar = document.getElementById('changeFullProfileAvatar');
+const fullProfileDisplayName = document.getElementById('fullProfileDisplayName');
+const fullProfileUsername = document.getElementById('fullProfileUsername');
+const fullProfileBio = document.getElementById('fullProfileBio');
+const fullProfileUserId = document.getElementById('fullProfileUserId');
+const copyFullUserIdBtn = document.getElementById('copyFullUserIdBtn');
+const profilePostsCount = document.getElementById('profilePostsCount');
+const profileFollowersCount = document.getElementById('profileFollowersCount');
+const profileFollowingCount = document.getElementById('profileFollowingCount');
+
+const openEditProfileModalBtn = document.getElementById('openEditProfileModalBtn');
+const logoutProfileBtn = document.getElementById('logoutProfileBtn');
+const gridTabBtns = document.querySelectorAll('.grid-tab-btn');
+const profileGridContent = document.getElementById('profileGridContent');
+
+// Edit Profile Modal
+const editProfileModal = document.getElementById('editProfileModal');
+const editNameInput = document.getElementById('editNameInput');
+const editBioInput = document.getElementById('editBioInput');
+const editLangSelect = document.getElementById('editLangSelect');
+const cancelEditProfileBtn = document.getElementById('cancelEditProfileBtn');
+const saveEditProfileBtn = document.getElementById('saveEditProfileBtn');
+
+// Comments Modal
+const commentsModal = document.getElementById('commentsModal');
+const commentsList = document.getElementById('commentsList');
+const commentTextInput = document.getElementById('commentTextInput');
+const submitCommentBtn = document.getElementById('submitCommentBtn');
+const closeCommentsBtn = document.getElementById('closeCommentsBtn');
+let activeCommentTarget = null; // { type: 'post'|'reel', id }
 
 // Call Modals
 const callModal = document.getElementById('callModal');
@@ -169,51 +194,12 @@ const incomingCallType = document.getElementById('incomingCallType');
 const declineCallBtn = document.getElementById('declineCallBtn');
 const acceptCallBtn = document.getElementById('acceptCallBtn');
 
-// Reels View
-const openCreateReelBtn = document.getElementById('openCreateReelBtn');
-const reelsFeed = document.getElementById('reelsFeed');
-const createReelModal = document.getElementById('createReelModal');
-const videoDropZone = document.getElementById('videoDropZone');
-const reelVideoFile = document.getElementById('reelVideoFile');
-const selectedVideoName = document.getElementById('selectedVideoName');
-const reelCaptionInput = document.getElementById('reelCaptionInput');
-const cancelCreateReelBtn = document.getElementById('cancelCreateReelBtn');
-const publishReelBtn = document.getElementById('publishReelBtn');
-
-const reelCommentsModal = document.getElementById('reelCommentsModal');
-const reelCommentsList = document.getElementById('reelCommentsList');
-const newCommentInput = document.getElementById('newCommentInput');
-const sendCommentBtn = document.getElementById('sendCommentBtn');
-const closeCommentsBtn = document.getElementById('closeCommentsBtn');
-let activeReelCommentId = null;
-
-const shareReelModal = document.getElementById('shareReelModal');
-const shareFriendsList = document.getElementById('shareFriendsList');
-const closeShareReelBtn = document.getElementById('closeShareReelBtn');
-let activeShareReel = null;
-
-// Profile Page Elements
-const fullProfileAvatar = document.getElementById('fullProfileAvatar');
-const changeFullProfileAvatar = document.getElementById('changeFullProfileAvatar');
-const fullProfileDisplayName = document.getElementById('fullProfileDisplayName');
-const fullProfileUsername = document.getElementById('fullProfileUsername');
-const fullProfileBio = document.getElementById('fullProfileBio');
-const fullProfileUserId = document.getElementById('fullProfileUserId');
-const copyFullUserIdBtn = document.getElementById('copyFullUserIdBtn');
-const profileFollowersCount = document.getElementById('profileFollowersCount');
-const profileFollowingCount = document.getElementById('profileFollowingCount');
-
-const profileTabBtns = document.querySelectorAll('.profile-tab-btn');
-const subtabLikedContent = document.getElementById('subtabLikedContent');
-const subtabMyReelsContent = document.getElementById('subtabMyReelsContent');
-const subtabSettingsContent = document.getElementById('subtabSettingsContent');
-const likedReelsGrid = document.getElementById('likedReelsGrid');
-const myReelsGrid = document.getElementById('myReelsGrid');
-
-const editProfileNameInput = document.getElementById('editProfileNameInput');
-const editProfileBioInput = document.getElementById('editProfileBioInput');
-const editProfileLangSelect = document.getElementById('editProfileLangSelect');
-const saveProfileSettingsBtn = document.getElementById('saveProfileSettingsBtn');
+// Add Contact Modal
+const addContactModal = document.getElementById('addContactModal');
+const newContactInput = document.getElementById('newContactInput');
+const confirmAddContactBtn = document.getElementById('confirmAddContactBtn');
+const cancelAddContactBtn = document.getElementById('cancelAddContactBtn');
+const contactError = document.getElementById('contactError');
 
 // Contact Profile Modal
 const contactProfileModal = document.getElementById('contactProfileModal');
@@ -229,13 +215,6 @@ const deleteFriendBtn = document.getElementById('deleteFriendBtn');
 const closeContactProfileBtn = document.getElementById('closeContactProfileBtn');
 let activeContactViewing = null;
 
-// Add Contact Modal
-const addContactModal = document.getElementById('addContactModal');
-const newContactInput = document.getElementById('newContactInput');
-const confirmAddContactBtn = document.getElementById('confirmAddContactBtn');
-const cancelAddContactBtn = document.getElementById('cancelAddContactBtn');
-const contactError = document.getElementById('contactError');
-
 // Chat Settings Modal
 const chatSettingsModal = document.getElementById('chatSettingsModal');
 const themeOptions = document.querySelectorAll('.theme-option');
@@ -243,6 +222,11 @@ const wallpaperUploadInput = document.getElementById('wallpaperUploadInput');
 const resetWallpaperBtn = document.getElementById('resetWallpaperBtn');
 const deleteChatBtn = document.getElementById('deleteChatBtn');
 const closeChatSettingsBtn = document.getElementById('closeChatSettingsBtn');
+
+// Lightbox
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightboxImg');
+const closeLightbox = document.getElementById('closeLightbox');
 
 function refreshIcons() {
   if (window.lucide) {
@@ -263,36 +247,56 @@ function formatDuration(sec) {
 }
 
 // -------------------------------------------------------------
-// LANGUAGE TOGGLING (i18n)
+// LANGUAGE TOGGLING
 // -------------------------------------------------------------
 
 function setLanguage(lang) {
   currentLang = lang;
   document.body.dataset.lang = lang;
   currentLangLabel.textContent = lang === 'ar' ? 'العربية' : 'English';
-  editProfileLangSelect.value = lang;
-
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.dataset.i18n;
-    if (translations[lang] && translations[lang][key]) {
-      el.textContent = translations[lang][key];
-    }
-  });
-
+  editLangSelect.value = lang;
   if (currentUser) {
     currentUser.language = lang;
-    localStorage.setItem('onyx_user_v3', JSON.stringify(currentUser));
+    localStorage.setItem('onyx_insta_user', JSON.stringify(currentUser));
   }
 }
 
 langToggleBtn.addEventListener('click', () => {
-  const newLang = currentLang === 'ar' ? 'en' : 'ar';
-  setLanguage(newLang);
+  setLanguage(currentLang === 'ar' ? 'en' : 'ar');
 });
 
 // -------------------------------------------------------------
-// AUTHENTICATION FLOW WITH VERIFICATION CODE
+// AUTHENTICATION (GOOGLE & GMAIL VERIFICATION)
 // -------------------------------------------------------------
+
+// Google One-Click Auth
+googleSignInBtn.addEventListener('click', async () => {
+  const email = prompt('أدخل بريد Gmail الخاص بك لتسجيل الدخول الفوري:', 'user@gmail.com');
+  if (!email) return;
+
+  const name = email.split('@')[0];
+  try {
+    const res = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        name,
+        avatarUrl: '/avatars/avatar-1.svg'
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      setCurrentUser(data.user);
+      authModal.classList.remove('active');
+      setupApp();
+    } else {
+      alert(data.error || 'فشل الدخول بحساب Google');
+    }
+  } catch (err) {
+    alert('حدث خطأ في الاتصال');
+  }
+});
 
 tabLoginBtn.addEventListener('click', () => {
   tabLoginBtn.classList.add('active');
@@ -310,33 +314,25 @@ tabRegisterBtn.addEventListener('click', () => {
   registerError.style.display = 'none';
 });
 
-// Toggle Email / Phone method
-let registerMethod = 'email';
 methodEmailBtn.addEventListener('click', () => {
-  registerMethod = 'email';
   methodEmailBtn.classList.add('active');
   methodPhoneBtn.classList.remove('active');
-  contactInputLabel.textContent = 'البريد الإلكتروني (Gmail):';
+  contactInputLabel.textContent = 'بريدك الإلكتروني (Gmail):';
   registerContactInput.placeholder = 'example@gmail.com';
-  contactInputIcon.setAttribute('data-lucide', 'at-sign');
-  refreshIcons();
 });
 
 methodPhoneBtn.addEventListener('click', () => {
-  registerMethod = 'phone';
   methodPhoneBtn.classList.add('active');
   methodEmailBtn.classList.remove('active');
-  contactInputLabel.textContent = 'رقم الهاتف:';
+  contactInputLabel.textContent = 'رقم هاتفك:';
   registerContactInput.placeholder = '0655123456';
-  contactInputIcon.setAttribute('data-lucide', 'phone');
-  refreshIcons();
 });
 
-// Send Verification Code
+// Send Verification Code (Gmail / Phone)
 sendCodeBtn.addEventListener('click', async () => {
   const contactVal = registerContactInput.value.trim();
   if (!contactVal) {
-    alert('يرجى كتابة البريد الإلكتروني أو رقم الهاتف أولاً');
+    alert('يرجى إدخال البريد الإلكتروني أو رقم الهاتف');
     return;
   }
 
@@ -352,11 +348,9 @@ sendCodeBtn.addEventListener('click', async () => {
     const data = await res.json();
 
     if (data.success) {
-      // Unhide Code input and Details section
       codeGroup.style.display = 'block';
       registerDetailsSection.style.display = 'block';
 
-      // Show in-app realistic toast with code
       toastCode.textContent = data.code;
       codeNotificationToast.style.display = 'flex';
 
@@ -365,10 +359,6 @@ sendCodeBtn.addEventListener('click', async () => {
         codeNotificationToast.style.display = 'none';
       };
 
-      setTimeout(() => {
-        codeNotificationToast.style.display = 'none';
-      }, 10000);
-
       sendCodeBtn.textContent = 'تم الإرسال ✓';
     } else {
       alert(data.error || 'تعذر إرسال الكود');
@@ -376,13 +366,12 @@ sendCodeBtn.addEventListener('click', async () => {
       sendCodeBtn.disabled = false;
     }
   } catch (err) {
-    alert('حدث خطأ في الاتصال');
+    alert('فشل الاتصال');
     sendCodeBtn.textContent = 'إرسال الكود';
     sendCodeBtn.disabled = false;
   }
 });
 
-// Presets
 registerPresets.forEach(p => {
   p.addEventListener('click', () => {
     registerPresets.forEach(x => x.classList.remove('active'));
@@ -424,7 +413,6 @@ submitRegisterBtn.addEventListener('click', async () => {
     registerError.style.display = 'block';
     return;
   }
-
   if (!username || !password) {
     registerError.textContent = 'يرجى إدخال اسم المستخدم وكلمة المرور';
     registerError.style.display = 'block';
@@ -452,11 +440,11 @@ submitRegisterBtn.addEventListener('click', async () => {
       authModal.classList.remove('active');
       setupApp();
     } else {
-      registerError.textContent = data.error || 'فشل التحقق والتسجيل';
+      registerError.textContent = data.error || 'فشل التسجيل';
       registerError.style.display = 'block';
     }
   } catch (err) {
-    registerError.textContent = 'فشل الاتصال بالخادم';
+    registerError.textContent = 'فشل الاتصال';
     registerError.style.display = 'block';
   }
 });
@@ -467,7 +455,7 @@ submitLoginBtn.addEventListener('click', async () => {
   const password = loginPassword.value;
 
   if (!usernameOrContact || !password) {
-    loginError.textContent = 'يرجى إدخال اسم المستخدم/البريد/الهاتف وكلمة المرور';
+    loginError.textContent = 'يرجى إدخال الحساب وكلمة المرور';
     loginError.style.display = 'block';
     return;
   }
@@ -489,70 +477,83 @@ submitLoginBtn.addEventListener('click', async () => {
       loginError.style.display = 'block';
     }
   } catch (err) {
-    loginError.textContent = 'فشل الاتصال بالخادم';
+    loginError.textContent = 'فشل الاتصال';
     loginError.style.display = 'block';
   }
 });
 
 function setCurrentUser(user) {
   currentUser = user;
-  localStorage.setItem('onyx_user_v3', JSON.stringify(user));
-  applyTheme(user.theme || 'onyx-purple');
+  localStorage.setItem('onyx_insta_user', JSON.stringify(user));
   setLanguage(user.language || 'ar');
+  applyTheme(user.theme || 'onyx-purple');
   if (user.chatWallpaper) {
     messagesViewport.style.backgroundImage = `url("${user.chatWallpaper}")`;
   }
 }
 
-logoutBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (confirm('هل ترغب بالتأكيد في تسجيل الخروج من ONYX CHAT؟')) {
-    localStorage.removeItem('onyx_user_v3');
+// Logout
+logoutProfileBtn.addEventListener('click', () => {
+  if (confirm('هل ترغب بالتأكيد في تسجيل الخروج من حسابك؟')) {
+    localStorage.removeItem('onyx_insta_user');
     window.location.reload();
   }
 });
 
 // -------------------------------------------------------------
-// TOPBAR NAVIGATION (CHATS / REELS / PROFILE)
+// NAVIGATION BAR ROUTING
 // -------------------------------------------------------------
 
 function switchView(viewName) {
   currentView = viewName;
-  navTabs.forEach(t => {
-    if (t.dataset.view === viewName) t.classList.add('active');
-    else t.classList.remove('active');
+  bottomNavBtns.forEach(btn => {
+    if (btn.dataset.view === viewName) btn.classList.add('active');
+    else btn.classList.remove('active');
   });
 
-  chatsView.classList.remove('active');
-  reelsView.classList.remove('active');
-  profileView.classList.remove('active');
+  viewHome.classList.remove('active');
+  viewExplore.classList.remove('active');
+  viewCreate.classList.remove('active');
+  viewReels.classList.remove('active');
+  viewDirect.classList.remove('active');
+  viewProfile.classList.remove('active');
 
-  if (viewName === 'chats') {
-    chatsView.classList.add('active');
-    loadContacts();
+  if (viewName === 'home') {
+    viewHome.classList.add('active');
+    loadStories();
+    loadPosts();
+  } else if (viewName === 'explore') {
+    viewExplore.classList.add('active');
+    loadExploreGrid();
+  } else if (viewName === 'create') {
+    viewCreate.classList.add('active');
   } else if (viewName === 'reels') {
-    reelsView.classList.add('active');
+    viewReels.classList.add('active');
     loadReels();
+  } else if (viewName === 'direct') {
+    viewDirect.classList.add('active');
+    loadContacts();
   } else if (viewName === 'profile') {
-    profileView.classList.add('active');
-    loadFullProfile();
+    viewProfile.classList.add('active');
+    loadProfile();
   }
 }
 
-navTabs.forEach(tab => {
-  tab.addEventListener('click', () => switchView(tab.dataset.view));
+bottomNavBtns.forEach(btn => {
+  btn.addEventListener('click', () => switchView(btn.dataset.view));
 });
 
-brandHomeBtn.addEventListener('click', () => switchView('chats'));
-openProfileFromSidebar.addEventListener('click', () => switchView('profile'));
+logoHomeBtn.addEventListener('click', () => switchView('home'));
+headerCreateBtn.addEventListener('click', () => switchView('create'));
+headerDirectBtn.addEventListener('click', () => switchView('direct'));
 
 // -------------------------------------------------------------
-// APP INITIALIZATION
+// INITIALIZATION & REALTIME
 // -------------------------------------------------------------
 
 function init() {
   refreshIcons();
-  const saved = localStorage.getItem('onyx_user_v3');
+  const saved = localStorage.getItem('onyx_insta_user');
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -561,24 +562,20 @@ function init() {
       setupApp();
       return;
     } catch (e) {
-      localStorage.removeItem('onyx_user_v3');
+      localStorage.removeItem('onyx_insta_user');
     }
   }
   authModal.classList.add('active');
 }
 
 function setupApp() {
-  currentUserName.textContent = currentUser.displayName || currentUser.username;
-  currentUserTag.textContent = currentUser.userId || 'ID-00000';
-  currentUserAvatar.src = currentUser.avatarUrl || '/avatars/avatar-1.svg';
+  bnavAvatar.src = currentUser.avatarUrl || '/avatars/avatar-1.svg';
+  myStoryAvatar.src = currentUser.avatarUrl || '/avatars/avatar-1.svg';
+  directHeaderUsername.textContent = currentUser.displayName || currentUser.username;
 
   initSocket();
-  loadContacts();
+  switchView('home');
 }
-
-// -------------------------------------------------------------
-// SOCKET.IO REALTIME
-// -------------------------------------------------------------
 
 function initSocket() {
   socket = io();
@@ -629,16 +626,12 @@ function initSocket() {
 
   socket.on('user_typing', ({ sender, recipient, isTyping }) => {
     if (activeRecipient && activeRecipient.toLowerCase() === sender.toLowerCase()) {
-      if (isTyping) {
-        typingText.textContent = `${sender} يكتب الآن...`;
-        typingIndicator.style.display = 'flex';
-      } else {
-        typingIndicator.style.display = 'none';
-      }
+      typingText.textContent = `${sender} يكتب الآن...`;
+      typingIndicator.style.display = isTyping ? 'flex' : 'none';
     }
   });
 
-  // Call Signaling
+  // Calls
   socket.on('incoming_call', ({ caller, callerData, isVideo }) => {
     activeCallTarget = caller;
     isAudioCallOnly = !isVideo;
@@ -649,36 +642,490 @@ function initSocket() {
   });
 
   socket.on('call_response', ({ from, accepted }) => {
-    if (accepted) {
-      callStatusText.textContent = 'تم الاتصال (مشفر E2E) • 00:01';
-    } else {
+    if (accepted) callStatusText.textContent = 'متصل (E2E مشفرة) • 00:01';
+    else {
       callStatusText.textContent = 'تم رفض المكالمة';
       setTimeout(() => closeCallUI(), 2000);
     }
   });
 
-  socket.on('call_ended', () => {
-    closeCallUI();
+  socket.on('call_ended', () => closeCallUI());
+
+  // Real-time Posts, Stories & Reels
+  socket.on('new_post', () => { if (currentView === 'home') loadPosts(); });
+  socket.on('new_story', () => { if (currentView === 'home') loadStories(); });
+  socket.on('new_reel', () => { if (currentView === 'reels') loadReels(); });
+}
+
+// -------------------------------------------------------------
+// 1. HOME FEED & STORIES
+// -------------------------------------------------------------
+
+async function loadStories() {
+  try {
+    const res = await fetch('/api/stories');
+    const data = await res.json();
+    storiesData = data.stories || [];
+    renderStories();
+  } catch (e) {}
+}
+
+function renderStories() {
+  storiesList.innerHTML = '';
+  storiesData.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'story-item';
+    div.innerHTML = `
+      <div class="story-avatar-wrap">
+        <img src="${s.creatorAvatar}" alt="${s.creator}">
+      </div>
+      <span class="story-username">${s.creatorDisplayName || s.creator}</span>
+    `;
+    div.onclick = () => {
+      openImageModal(s.mediaUrl);
+    };
+    storiesList.appendChild(div);
+  });
+}
+
+addMyStoryBtn.addEventListener('click', () => {
+  createType = 'story';
+  switchView('create');
+  createTabBtns.forEach(b => {
+    if (b.dataset.type === 'story') b.classList.add('active');
+    else b.classList.remove('active');
+  });
+  captionGroup.style.display = 'none';
+});
+
+async function loadPosts() {
+  try {
+    const res = await fetch('/api/posts');
+    const data = await res.json();
+    postsData = data.posts || [];
+    renderPosts();
+  } catch (e) {}
+}
+
+function renderPosts() {
+  postsFeed.innerHTML = '';
+
+  if (postsData.length === 0) {
+    postsFeed.innerHTML = `
+      <div style="text-align:center; padding: 60px 20px; color: var(--text-muted);">
+        <i data-lucide="image" style="width: 50px; height: 50px; margin-bottom: 12px; color: var(--primary);"></i>
+        <h3>لا توجد منشورات بعد</h3>
+        <p>كن أول من يشارك منشوراً مع الجميع! اضغط على <b>➕</b> لنشر صورة أو فيديو.</p>
+      </div>
+    `;
+    refreshIcons();
+    return;
+  }
+
+  postsData.forEach(p => {
+    const isLiked = currentUser && p.likes && p.likes.includes(currentUser.username);
+    const card = document.createElement('div');
+    card.className = 'post-card';
+
+    const isVideo = p.type === 'video';
+    const mediaHtml = isVideo
+      ? `<video src="${p.mediaUrl}" controls loop playsinline class="post-media"></video>`
+      : `<img src="${p.mediaUrl}" class="post-media" onclick="openImageModal('${p.mediaUrl}')">`;
+
+    card.innerHTML = `
+      <div class="post-header">
+        <div class="post-creator-info" onclick="openContactProfile('${p.creator}')">
+          <div class="post-creator-avatar">
+            <img src="${p.creatorAvatar || '/avatars/avatar-1.svg'}" alt="${p.creator}">
+          </div>
+          <div>
+            <span class="post-creator-name">${p.creatorDisplayName || p.creator}</span>
+            <div class="post-creator-id">${p.creatorUserId || ''}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="post-media-box">${mediaHtml}</div>
+
+      <div class="post-actions-bar">
+        <div class="post-action-icons">
+          <button class="post-action-btn ${isLiked ? 'liked' : ''}" onclick="likePost('${p.id}')">
+            <i data-lucide="heart"></i>
+          </button>
+          <button class="post-action-btn" onclick="openComments('post', '${p.id}')">
+            <i data-lucide="message-circle"></i>
+          </button>
+          <button class="post-action-btn" onclick="shareToDirect('${p.mediaUrl}', '${p.caption}')">
+            <i data-lucide="send"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="post-likes-count">${p.likes ? p.likes.length : 0} إعجاب</div>
+
+      <div class="post-caption-box">
+        <strong>${p.creatorDisplayName || p.creator}</strong> ${escapeHtml(p.caption)}
+      </div>
+
+      <div class="post-comments-summary" onclick="openComments('post', '${p.id}')">
+        عرض جميع التعليقات (${p.comments ? p.comments.length : 0})...
+      </div>
+    `;
+
+    postsFeed.appendChild(card);
   });
 
-  // Reels live updates
-  socket.on('new_reel', (reel) => {
-    if (currentView === 'reels') loadReels();
-  });
+  refreshIcons();
+}
 
-  socket.on('reel_deleted', ({ reelId }) => {
-    const card = document.getElementById('reel_card_' + reelId);
-    if (card) card.remove();
-  });
+window.likePost = async function(postId) {
+  if (!currentUser) return;
+  try {
+    const res = await fetch(`/api/posts/${postId}/like`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser.username })
+    });
+    const d = await res.json();
+    if (d.success) loadPosts();
+  } catch (e) {}
+};
 
-  socket.on('reel_liked', ({ reelId, likesCount }) => {
-    const countEl = document.getElementById('like_count_' + reelId);
-    if (countEl) countEl.textContent = likesCount;
+// -------------------------------------------------------------
+// 2. EXPLORE VIEW (SEARCH BY USER ID / USERNAME)
+// -------------------------------------------------------------
+
+exploreSearchBtn.addEventListener('click', searchUserById);
+exploreSearchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') searchUserById();
+});
+
+async function searchUserById() {
+  const query = exploreSearchInput.value.trim();
+  if (!query) return;
+
+  try {
+    const res = await fetch(`/api/user-profile?identifier=${encodeURIComponent(query)}&current=${encodeURIComponent(currentUser.username)}`);
+    const data = await res.json();
+
+    if (data.user) {
+      const u = data.user;
+      searchResultCard.style.display = 'flex';
+      searchResultCard.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="openContactProfile('${u.username}')">
+          <img src="${u.avatarUrl}" style="width: 44px; height: 44px; border-radius: 50%;">
+          <div>
+            <strong>${u.displayName}</strong>
+            <div style="font-size: 0.75rem; color: var(--primary); font-family: monospace;">${u.userId} (@${u.username})</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-primary" onclick="openChatWith('${u.username}', '${u.avatarUrl}', ${u.online}, '${u.displayName}')">محادثة Direct</button>
+        </div>
+      `;
+    } else {
+      searchResultCard.style.display = 'block';
+      searchResultCard.innerHTML = '<span style="color:#ef4444;">لم يتم العثور على مستخدم بهذا المعرف أو الاسم.</span>';
+    }
+  } catch (e) {
+    searchResultCard.style.display = 'block';
+    searchResultCard.innerHTML = '<span style="color:#ef4444;">خطأ في البحث.</span>';
+  }
+}
+
+function loadExploreGrid() {
+  exploreGrid.innerHTML = '';
+  const mediaList = [...postsData, ...reelsData];
+  mediaList.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'explore-item';
+    const isVideo = m.videoUrl || m.type === 'video';
+    const url = m.videoUrl || m.mediaUrl;
+    div.innerHTML = isVideo ? `<video src="${url}"></video>` : `<img src="${url}">`;
+    div.onclick = () => {
+      if (isVideo) switchView('reels');
+      else openImageModal(url);
+    };
+    exploreGrid.appendChild(div);
   });
 }
 
 // -------------------------------------------------------------
-// CHATS VIEW LOGIC
+// 3. CREATE VIEW (POST, REEL, STORY)
+// -------------------------------------------------------------
+
+createTabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    createTabBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    createType = btn.dataset.type;
+    captionGroup.style.display = createType === 'story' ? 'none' : 'block';
+  });
+});
+
+createUploadDropzone.addEventListener('click', () => createFileInput.click());
+
+createFileInput.addEventListener('change', (e) => {
+  if (e.target.files[0]) {
+    createUploadFileName.textContent = e.target.files[0].name;
+  }
+});
+
+submitCreateBtn.addEventListener('click', async () => {
+  const file = createFileInput.files[0];
+  const caption = createCaptionInput.value.trim();
+
+  if (!file) {
+    alert('يرجى اختيار ملف صورة أو فيديو أولاً');
+    return;
+  }
+
+  submitCreateBtn.disabled = true;
+  submitCreateBtn.textContent = 'جاري الرفع والنشر...';
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try {
+    const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd });
+    const uploadData = await uploadRes.json();
+
+    if (uploadData.url) {
+      const isVideo = uploadData.mimetype.startsWith('video');
+
+      if (createType === 'post') {
+        await fetch('/api/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            creator: currentUser.username,
+            mediaUrl: uploadData.url,
+            type: isVideo ? 'video' : 'image',
+            caption
+          })
+        });
+        switchView('home');
+      } else if (createType === 'reel') {
+        await fetch('/api/reels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            creator: currentUser.username,
+            videoUrl: uploadData.url,
+            caption
+          })
+        });
+        switchView('reels');
+      } else if (createType === 'story') {
+        await fetch('/api/stories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            creator: currentUser.username,
+            mediaUrl: uploadData.url
+          })
+        });
+        switchView('home');
+      }
+
+      createFileInput.value = '';
+      createUploadFileName.textContent = 'اضغط هنا لاختيار صورة أو مقطع فيديو';
+      createCaptionInput.value = '';
+    }
+  } catch (e) {
+    alert('تعذر النشر، حاول مرة أخرى');
+  }
+
+  submitCreateBtn.disabled = false;
+  submitCreateBtn.textContent = 'مشاركة ونشر الآن';
+});
+
+// -------------------------------------------------------------
+// 4. REELS VIEW
+// -------------------------------------------------------------
+
+async function loadReels() {
+  try {
+    const res = await fetch('/api/reels');
+    const data = await res.json();
+    reelsData = data.reels || [];
+    renderReels();
+  } catch (e) {}
+}
+
+function renderReels() {
+  reelsFeed.innerHTML = '';
+  if (reelsData.length === 0) {
+    reelsFeed.innerHTML = `
+      <div style="text-align:center; padding: 60px 20px; color: var(--text-muted);">
+        <i data-lucide="play-square" style="width: 50px; height: 50px; margin-bottom: 12px; color: var(--primary);"></i>
+        <h3>لا توجد مقاطع ريلز بعد</h3>
+        <p>اضغط على <b>➕</b> لنشر ريلز جديد الآن!</p>
+      </div>
+    `;
+    refreshIcons();
+    return;
+  }
+
+  reelsData.forEach(r => {
+    const isOwner = currentUser && r.creator.toLowerCase() === currentUser.username.toLowerCase();
+    const isLiked = currentUser && r.likes && r.likes.includes(currentUser.username);
+
+    const card = document.createElement('div');
+    card.className = 'reel-card';
+    card.id = 'reel_card_' + r.id;
+
+    card.innerHTML = `
+      <video src="${r.videoUrl}" class="reel-video" loop playsinline onclick="this.paused ? this.play() : this.pause()"></video>
+
+      <div class="reel-overlay">
+        <div class="reel-creator-row">
+          <img src="${r.creatorAvatar || '/avatars/avatar-1.svg'}" class="reel-avatar">
+          <span class="reel-creator-name">${r.creatorDisplayName || r.creator}</span>
+          ${!isOwner ? `<button class="btn-follow-pill" onclick="toggleFollowUser('${r.creator}')">+ متابعة</button>` : ''}
+        </div>
+        <p class="reel-caption">${escapeHtml(r.caption)}</p>
+      </div>
+
+      <div class="reel-side-actions">
+        <button class="reel-action-btn ${isLiked ? 'liked' : ''}" onclick="likeReel('${r.id}')">
+          <i data-lucide="heart"></i>
+        </button>
+        <span style="font-size:0.75rem; color:white;">${r.likes ? r.likes.length : 0}</span>
+
+        <button class="reel-action-btn" onclick="openComments('reel', '${r.id}')">
+          <i data-lucide="message-circle"></i>
+        </button>
+        <span style="font-size:0.75rem; color:white;">${r.comments ? r.comments.length : 0}</span>
+
+        <button class="reel-action-btn" onclick="shareToDirect('${r.videoUrl}', '${r.caption}')">
+          <i data-lucide="send"></i>
+        </button>
+
+        ${isOwner ? `
+          <button class="reel-action-btn" onclick="deleteMyReel('${r.id}')">
+            <i data-lucide="trash-2" style="color: #ef4444;"></i>
+          </button>
+        ` : ''}
+      </div>
+    `;
+    reelsFeed.appendChild(card);
+  });
+  refreshIcons();
+}
+
+window.likeReel = async function(reelId) {
+  if (!currentUser) return;
+  try {
+    const res = await fetch(`/api/reels/${reelId}/like`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser.username })
+    });
+    const d = await res.json();
+    if (d.success) loadReels();
+  } catch (e) {}
+};
+
+window.deleteMyReel = async function(reelId) {
+  if (!confirm('هل تريد حذف هذا الريلز؟')) return;
+  try {
+    const res = await fetch(`/api/reels/${reelId}?username=${encodeURIComponent(currentUser.username)}`, { method: 'DELETE' });
+    const d = await res.json();
+    if (d.success) {
+      const c = document.getElementById('reel_card_' + reelId);
+      if (c) c.remove();
+    }
+  } catch (e) {}
+};
+
+// -------------------------------------------------------------
+// COMMENTS MODAL (POSTS & REELS)
+// -------------------------------------------------------------
+
+window.openComments = function(type, id) {
+  activeCommentTarget = { type, id };
+  let comments = [];
+
+  if (type === 'post') {
+    const p = postsData.find(x => x.id === id);
+    if (p) comments = p.comments || [];
+  } else {
+    const r = reelsData.find(x => x.id === id);
+    if (r) comments = r.comments || [];
+  }
+
+  renderComments(comments);
+  commentsModal.classList.add('active');
+};
+
+closeCommentsBtn.addEventListener('click', () => {
+  commentsModal.classList.remove('active');
+  activeCommentTarget = null;
+});
+
+function renderComments(list) {
+  commentsList.innerHTML = '';
+  if (list.length === 0) {
+    commentsList.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد تعليقات بعد.</div>';
+    return;
+  }
+  list.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'comment-row';
+    row.innerHTML = `
+      <img src="${c.avatarUrl || '/avatars/avatar-1.svg'}" class="comment-avatar">
+      <div class="comment-bubble">
+        <div class="comment-author">${c.displayName || c.username}</div>
+        <div>${escapeHtml(c.text)}</div>
+      </div>
+    `;
+    commentsList.appendChild(row);
+  });
+}
+
+submitCommentBtn.addEventListener('click', async () => {
+  if (!activeCommentTarget) return;
+  const text = commentTextInput.value.trim();
+  if (!text) return;
+
+  const endpoint = activeCommentTarget.type === 'post'
+    ? `/api/posts/${activeCommentTarget.id}/comment`
+    : `/api/reels/${activeCommentTarget.id}/comment`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser.username, text })
+    });
+    const d = await res.json();
+    if (d.success) {
+      commentTextInput.value = '';
+      if (activeCommentTarget.type === 'post') loadPosts();
+      else loadReels();
+      commentsModal.classList.remove('active');
+    }
+  } catch (e) {}
+});
+
+// Share to Direct
+window.shareToDirect = function(url, caption) {
+  switchView('direct');
+  if (activeRecipient) {
+    socket.emit('send_message', {
+      recipient: activeRecipient,
+      type: 'text',
+      content: `مشاركة من ONYX:\n${caption}\n${window.location.origin}${url}`
+    });
+    alert('تم إرسال الرابط في المحادثة الحالية!');
+  } else {
+    alert('اختر صديقاً من قائمة الرسائل الخاصة لإرسال المنشور إليه.');
+  }
+};
+
+// -------------------------------------------------------------
+// 5. DIRECT MESSAGES VIEW
 // -------------------------------------------------------------
 
 async function loadContacts() {
@@ -688,19 +1135,16 @@ async function loadContacts() {
     const data = await res.json();
     contacts = data.contacts || [];
     renderContactsList();
-  } catch (err) {
-    console.error('Failed to load contacts', err);
-  }
+  } catch (e) {}
 }
 
 function renderContactsList() {
   contactsList.innerHTML = '';
-
   if (contacts.length === 0) {
     contactsList.innerHTML = `
-      <div style="text-align:center; padding: 24px 16px; color: var(--text-muted); font-size: 0.85rem;">
-        لا يوجد أصدقاء بعد.<br>
-        اضغط على <b>إضافة صديق برمز المعرف</b> وشارك معرفك <b>${currentUser ? currentUser.userId : ''}</b>!
+      <div style="text-align:center; padding:24px 16px; color:var(--text-muted); font-size:0.85rem;">
+        لا توجد محادثات بعد.<br>
+        أضف صديقك برمز المعرف <b>${currentUser.userId}</b>!
       </div>
     `;
     return;
@@ -710,11 +1154,11 @@ function renderContactsList() {
     const card = document.createElement('div');
     card.className = `contact-card ${activeRecipient && activeRecipient.toLowerCase() === c.username.toLowerCase() ? 'active' : ''}`;
     
-    let lastMsgText = 'لا توجد رسائل';
+    let lastMsg = 'لا توجد رسائل';
     if (c.lastMessage) {
-      if (c.lastMessage.type === 'image') lastMsgText = '📷 صورة';
-      else if (c.lastMessage.type === 'audio') lastMsgText = '🎙️ رسالة صوتية (فوكال)';
-      else lastMsgText = c.lastMessage.content;
+      if (c.lastMessage.type === 'image') lastMsg = '📷 صورة';
+      else if (c.lastMessage.type === 'audio') lastMsg = '🎙️ فوكال';
+      else lastMsg = c.lastMessage.content;
     }
 
     card.innerHTML = `
@@ -725,23 +1169,19 @@ function renderContactsList() {
       <div class="contact-info">
         <div class="contact-top">
           <span class="contact-name">${c.displayName || c.username}</span>
-          <span class="contact-time">${c.lastMessage ? formatTime(c.lastMessage.timestamp) : ''}</span>
+          <span style="font-size:0.7rem; color:var(--text-muted);">${c.lastMessage ? formatTime(c.lastMessage.timestamp) : ''}</span>
         </div>
-        <p class="contact-last-msg">${lastMsgText}</p>
+        <p class="contact-last-msg">${lastMsg}</p>
       </div>
     `;
-
-    card.addEventListener('click', () => {
-      openChatWith(c.username, c.avatarUrl, c.online, c.displayName);
-    });
-
+    card.onclick = () => openChatWith(c.username, c.avatarUrl, c.online, c.displayName);
     contactsList.appendChild(card);
   });
 }
 
-tabBtns.forEach(btn => {
+chatTabs.forEach(btn => {
   btn.addEventListener('click', () => {
-    tabBtns.forEach(b => b.classList.remove('active'));
+    chatTabs.forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentTab = btn.dataset.tab;
 
@@ -757,7 +1197,7 @@ async function openChatWith(username, avatarUrl, isOnline, customTitle = null) {
   activeRecipient = username;
 
   if (window.innerWidth <= 768) {
-    sidebar.classList.add('hidden');
+    directSidebar.classList.add('hidden');
   }
 
   activeChatName.textContent = customTitle || username;
@@ -779,11 +1219,7 @@ async function openChatWith(username, avatarUrl, isOnline, customTitle = null) {
     if (data.messages && data.messages.length > 0) {
       data.messages.forEach(msg => appendMessageToUI(msg));
     } else {
-      messagesList.innerHTML = `
-        <div style="text-align:center; padding:30px; color:var(--text-muted); font-size: 0.9rem;">
-          المحادثة فارغة ومحمية بتشفير تام. ابدأ بإرسال رسالة، صورة، أو فوكال!
-        </div>
-      `;
+      messagesList.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-muted);">المحادثة فارغة ومشفرة. ابدأ بالتحدث الآن!</div>';
     }
     messagesViewport.scrollTop = messagesViewport.scrollHeight;
   } catch (err) {
@@ -795,80 +1231,65 @@ async function openChatWith(username, avatarUrl, isOnline, customTitle = null) {
 
 function updateActiveChatHeaderStatus(isOnline) {
   if (activeRecipient === 'global') {
-    activeChatStatus.textContent = 'غرفة عامة مشفرة للجميع';
+    activeChatStatus.textContent = 'غرفة عامة مشفرة';
     activeChatStatusIndicator.className = 'status-indicator online';
     return;
   }
   if (isOnline) {
-    activeChatStatus.textContent = 'متصل الآن (Online) • E2E مشفرة';
+    activeChatStatus.textContent = 'متصل الآن • E2E مشفرة';
     activeChatStatusIndicator.className = 'status-indicator online';
   } else {
-    activeChatStatus.textContent = 'غير متصل (Offline)';
+    activeChatStatus.textContent = 'غير متصل';
     activeChatStatusIndicator.className = 'status-indicator';
   }
 }
 
-backToSidebarBtn.addEventListener('click', () => {
-  sidebar.classList.remove('hidden');
+directBackToSidebar.addEventListener('click', () => {
+  directSidebar.classList.remove('hidden');
 });
 
-// Append Message & Single Delete Button
 function appendMessageToUI(msg) {
   const isOutgoing = msg.sender.toLowerCase() === currentUser.username.toLowerCase();
-  
   const row = document.createElement('div');
   row.className = `message-row ${isOutgoing ? 'outgoing' : 'incoming'}`;
   row.id = 'msg_row_' + msg.id;
 
   let contentHtml = '';
   const senderHeader = (!isOutgoing && activeRecipient === 'global')
-    ? `<div class="msg-sender-name">${msg.sender}</div>`
+    ? `<div style="font-size:0.75rem; font-weight:700; color:#38bdf8; margin-bottom:4px;">${msg.sender}</div>`
     : '';
 
   if (msg.type === 'image') {
     contentHtml = `
       ${senderHeader}
-      <img src="${msg.mediaUrl}" class="msg-image" alt="صورة" onclick="openImageModal('${msg.mediaUrl}')">
-      <div class="msg-time">${formatTime(msg.timestamp)}</div>
+      <img src="${msg.mediaUrl}" style="max-width:260px; max-height:260px; border-radius:12px; cursor:pointer;" onclick="openImageModal('${msg.mediaUrl}')">
+      <div style="font-size:0.65rem; opacity:0.7; margin-top:4px; text-align:left; direction:ltr;">${formatTime(msg.timestamp)}</div>
     `;
   } else if (msg.type === 'audio') {
     const audioId = 'audio_' + msg.id;
     contentHtml = `
       ${senderHeader}
       <div class="vocal-player">
-        <button class="vocal-play-btn" onclick="toggleAudioPlay('${audioId}', this)">
-          <i data-lucide="play"></i>
-        </button>
+        <button class="vocal-play-btn" onclick="toggleAudioPlay('${audioId}', this)"><i data-lucide="play"></i></button>
         <div class="vocal-progress-bar" onclick="seekAudio('${audioId}', event)">
           <div class="vocal-progress-fill" id="fill_${audioId}"></div>
         </div>
-        <span class="vocal-time" id="time_${audioId}">${msg.duration ? formatDuration(msg.duration) : '0:00'}</span>
+        <span style="font-size:0.75rem; font-family:monospace;" id="time_${audioId}">${msg.duration ? formatDuration(msg.duration) : '0:00'}</span>
         <audio id="${audioId}" src="${msg.mediaUrl}" preload="metadata"></audio>
       </div>
-      <div class="msg-time">${formatTime(msg.timestamp)}</div>
+      <div style="font-size:0.65rem; opacity:0.7; margin-top:4px; text-align:left; direction:ltr;">${formatTime(msg.timestamp)}</div>
     `;
   } else {
     contentHtml = `
       ${senderHeader}
-      <div class="msg-text">${escapeHtml(msg.content)}</div>
-      <div class="msg-time">${formatTime(msg.timestamp)}</div>
+      <div style="font-size:0.95rem; line-height:1.4;">${escapeHtml(msg.content)}</div>
+      <div style="font-size:0.65rem; opacity:0.7; margin-top:4px; text-align:left; direction:ltr;">${formatTime(msg.timestamp)}</div>
     `;
   }
 
-  // Delete message button (only for sender)
-  let deleteBtnHtml = '';
-  if (isOutgoing) {
-    deleteBtnHtml = `
-      <button class="msg-delete-btn" onclick="deleteSingleMessage('${msg.id}')" title="حذف هذه الرسالة">
-        <i data-lucide="trash-2"></i>
-      </button>
-    `;
-  }
+  let deleteBtn = isOutgoing ? `<button class="msg-delete-btn" onclick="deleteSingleMessage('${msg.id}')" title="حذف الرسالة"><i data-lucide="trash-2"></i></button>` : '';
 
-  row.innerHTML = `
-    <div class="msg-bubble">${contentHtml}</div>
-    ${deleteBtnHtml}
-  `;
+  row.innerHTML = `<div class="msg-bubble">${contentHtml}</div>${deleteBtn}`;
   messagesList.appendChild(row);
   refreshIcons();
 }
@@ -880,8 +1301,7 @@ function escapeHtml(text) {
 }
 
 window.deleteSingleMessage = async function(messageId) {
-  if (!confirm('هل تريد حذف هذه الرسالة من المحادثة؟')) return;
-
+  if (!confirm('حذف هذه الرسالة؟')) return;
   try {
     const res = await fetch('/api/messages/delete-one', {
       method: 'POST',
@@ -893,12 +1313,9 @@ window.deleteSingleMessage = async function(messageId) {
       const row = document.getElementById('msg_row_' + messageId);
       if (row) row.remove();
     }
-  } catch (err) {
-    alert('تعذر حذف الرسالة');
-  }
+  } catch (e) {}
 };
 
-// Sending Text
 function sendTextMessage() {
   if (!activeRecipient) return;
   const text = messageInput.value.trim();
@@ -909,7 +1326,6 @@ function sendTextMessage() {
     type: 'text',
     content: text
   });
-
   messageInput.value = '';
 }
 
@@ -921,7 +1337,6 @@ messageInput.addEventListener('keydown', (e) => {
   }
 });
 
-// Send Image
 imageUploadInput.addEventListener('change', async (e) => {
   if (!activeRecipient) return;
   const file = e.target.files[0];
@@ -939,26 +1354,21 @@ imageUploadInput.addEventListener('change', async (e) => {
         mediaUrl: d.url
       });
     }
-  } catch (err) {
-    alert('تعذر إرسال الصورة');
-  }
+  } catch (e) {}
   imageUploadInput.value = '';
 });
 
-// -------------------------------------------------------------
-// AUDIO RECORDING (VOCAL)
-// -------------------------------------------------------------
-
+// Vocal recording
 recordVocalBtn.addEventListener('click', async () => {
   if (!activeRecipient) {
-    alert('اختر شخصاً للتسجيل معه');
+    alert('اختر محادثة أولاً');
     return;
   }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     startRecording(stream);
-  } catch (err) {
-    alert('يرجى السماح بالوصول إلى الميكروفون لتسجيل الفوكال');
+  } catch (e) {
+    alert('يرجى السماح بالوصول للميكروفون');
   }
 });
 
@@ -973,10 +1383,7 @@ function startRecording(stream) {
   }
 
   mediaRecorder = new MediaRecorder(stream, { mimeType });
-  mediaRecorder.ondataavailable = (e) => {
-    if (e.data.size > 0) audioChunks.push(e.data);
-  };
-
+  mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
   mediaRecorder.onstop = async () => {
     stream.getTracks().forEach(t => t.stop());
     clearInterval(recordingInterval);
@@ -999,13 +1406,10 @@ function startRecording(stream) {
           duration: recordingSeconds
         });
       }
-    } catch (err) {
-      alert('تعذر إرسال الفوكال');
-    }
+    } catch (e) {}
   };
 
   mediaRecorder.start(200);
-
   normalControls.style.display = 'none';
   recordingBar.style.display = 'flex';
   recordingTimer.textContent = '00:00';
@@ -1068,7 +1472,6 @@ window.toggleAudioPlay = function(audioId, btn) {
     audio.onended = () => {
       btn.innerHTML = '<i data-lucide="play"></i>';
       if (fill) fill.style.width = '0%';
-      if (time) time.textContent = formatDuration(audio.duration || 0);
       currentlyPlayingAudio = null;
       refreshIcons();
     };
@@ -1090,17 +1493,16 @@ window.seekAudio = function(audioId, event) {
 };
 
 // -------------------------------------------------------------
-// CALLS SYSTEM (AUDIO & VIDEO CALLS)
+// CALLS SYSTEM
 // -------------------------------------------------------------
 
 async function initiateCall(isVideo) {
   if (!activeRecipient || activeRecipient === 'global') return;
-
   activeCallTarget = activeRecipient;
   isAudioCallOnly = !isVideo;
   callUserName.textContent = activeChatName.textContent;
   callUserAvatar.src = activeChatAvatar.src;
-  callStatusText.textContent = isVideo ? 'جاري بدء مكالمة فيديو...' : 'جاري الاتصال...';
+  callStatusText.textContent = isVideo ? 'بدء مكالمة فيديو...' : 'جاري الاتصال...';
 
   callModal.classList.add('active');
 
@@ -1109,21 +1511,15 @@ async function initiateCall(isVideo) {
     try {
       localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localVideo.srcObject = localStream;
-    } catch (e) {
-      console.warn('Camera not available or blocked');
-    }
+    } catch (e) {}
   } else {
     callVideoViewport.style.display = 'none';
   }
 
-  // Emit call start
   socket.emit('call_start', {
     recipient: activeRecipient,
     isVideo,
-    callerData: {
-      displayName: currentUser.displayName,
-      avatarUrl: currentUser.avatarUrl
-    }
+    callerData: { displayName: currentUser.displayName, avatarUrl: currentUser.avatarUrl }
   });
 }
 
@@ -1135,7 +1531,7 @@ acceptCallBtn.addEventListener('click', async () => {
   callModal.classList.add('active');
   callUserName.textContent = incomingCallerName.textContent;
   callUserAvatar.src = incomingCallerAvatar.src;
-  callStatusText.textContent = 'تم الاتصال • 00:01';
+  callStatusText.textContent = 'متصل • 00:01';
 
   if (!isAudioCallOnly) {
     callVideoViewport.style.display = 'block';
@@ -1143,8 +1539,6 @@ acceptCallBtn.addEventListener('click', async () => {
       localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localVideo.srcObject = localStream;
     } catch (e) {}
-  } else {
-    callVideoViewport.style.display = 'none';
   }
 
   socket.emit('call_answer', { caller: activeCallTarget, accepted: true });
@@ -1157,9 +1551,7 @@ declineCallBtn.addEventListener('click', () => {
 });
 
 endCallBtn.addEventListener('click', () => {
-  if (activeCallTarget) {
-    socket.emit('call_end', { targetUser: activeCallTarget });
-  }
+  if (activeCallTarget) socket.emit('call_end', { targetUser: activeCallTarget });
   closeCallUI();
 });
 
@@ -1175,301 +1567,29 @@ function closeCallUI() {
 }
 
 // -------------------------------------------------------------
-// REELS & SHORT VIDEOS
+// 6. INSTAGRAM PROFILE VIEW
 // -------------------------------------------------------------
 
-async function loadReels() {
-  try {
-    const res = await fetch('/api/reels');
-    const data = await res.json();
-    reelsData = data.reels || [];
-    renderReelsFeed();
-  } catch (err) {
-    console.error('Failed to load reels', err);
-  }
-}
-
-function renderReelsFeed() {
-  reelsFeed.innerHTML = '';
-
-  if (reelsData.length === 0) {
-    reelsFeed.innerHTML = `
-      <div style="text-align:center; padding: 60px 20px; color: var(--text-muted);">
-        <i data-lucide="video" style="width: 50px; height: 50px; margin-bottom: 12px; color: var(--primary);"></i>
-        <h3>لا توجد مقاطع ريلز بعد</h3>
-        <p>كن أول من يشارك فيديو مع الجميع! اضغط على <b>نشر ريلز جديد</b> بالأعلى.</p>
-      </div>
-    `;
-    refreshIcons();
-    return;
-  }
-
-  reelsData.forEach(r => {
-    const isOwner = currentUser && r.creator.toLowerCase() === currentUser.username.toLowerCase();
-    const isLiked = currentUser && r.likes && r.likes.includes(currentUser.username);
-
-    const card = document.createElement('div');
-    card.className = 'reel-card';
-    card.id = 'reel_card_' + r.id;
-
-    card.innerHTML = `
-      <video src="${r.videoUrl}" class="reel-video" loop playsinline onclick="this.paused ? this.play() : this.pause()"></video>
-
-      <!-- Overlay details -->
-      <div class="reel-overlay">
-        <div class="reel-creator-row">
-          <img src="${r.creatorAvatar || '/avatars/avatar-1.svg'}" class="reel-avatar" alt="creator">
-          <span class="reel-creator-name">${r.creatorDisplayName || r.creator}</span>
-          ${!isOwner ? `<button class="btn-follow-pill" onclick="toggleFollowUser('${r.creator}')">+ متابعة</button>` : ''}
-        </div>
-        <p class="reel-caption">${escapeHtml(r.caption)}</p>
-      </div>
-
-      <!-- Side Action Buttons -->
-      <div class="reel-side-actions">
-        <button class="reel-action-btn ${isLiked ? 'liked' : ''}" onclick="likeReel('${r.id}')" title="إعجاب">
-          <i data-lucide="heart"></i>
-        </button>
-        <span class="reel-action-count" id="like_count_${r.id}">${r.likes ? r.likes.length : 0}</span>
-
-        <button class="reel-action-btn" onclick="openReelComments('${r.id}')" title="تعليقات">
-          <i data-lucide="message-circle"></i>
-        </button>
-        <span class="reel-action-count">${r.comments ? r.comments.length : 0}</span>
-
-        <button class="reel-action-btn" onclick="openShareReelModal('${r.id}')" title="مشاركة في المحادثات">
-          <i data-lucide="send"></i>
-        </button>
-
-        ${isOwner ? `
-          <button class="reel-action-btn" onclick="deleteMyReel('${r.id}')" title="حذف الفيديو">
-            <i data-lucide="trash-2" style="color: #ef4444;"></i>
-          </button>
-        ` : ''}
-      </div>
-    `;
-
-    reelsFeed.appendChild(card);
-  });
-
-  refreshIcons();
-}
-
-window.likeReel = async function(reelId) {
-  if (!currentUser) return;
-  try {
-    const res = await fetch(`/api/reels/${reelId}/like`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: currentUser.username })
-    });
-    const d = await res.json();
-    if (d.success) {
-      loadReels();
-    }
-  } catch (e) {}
-};
-
-window.deleteMyReel = async function(reelId) {
-  if (!confirm('هل تريد بالتأكيد حذف هذا الريلز؟')) return;
-  try {
-    const res = await fetch(`/api/reels/${reelId}?username=${encodeURIComponent(currentUser.username)}`, {
-      method: 'DELETE'
-    });
-    const d = await res.json();
-    if (d.success) {
-      const card = document.getElementById('reel_card_' + reelId);
-      if (card) card.remove();
-    }
-  } catch (e) {}
-};
-
-// Create Reel Modal
-openCreateReelBtn.addEventListener('click', () => {
-  reelVideoFile.value = '';
-  selectedVideoName.textContent = 'اضغط هنا لاختيار فيديو (MP4 / WebM)';
-  reelCaptionInput.value = '';
-  createReelModal.classList.add('active');
-});
-
-cancelCreateReelBtn.addEventListener('click', () => {
-  createReelModal.classList.remove('active');
-});
-
-videoDropZone.addEventListener('click', () => reelVideoFile.click());
-
-reelVideoFile.addEventListener('change', (e) => {
-  if (e.target.files[0]) {
-    selectedVideoName.textContent = e.target.files[0].name;
-  }
-});
-
-publishReelBtn.addEventListener('click', async () => {
-  const file = reelVideoFile.files[0];
-  const caption = reelCaptionInput.value.trim();
-
-  if (!file) {
-    alert('يرجى اختيار مقطع فيديو أولاً');
-    return;
-  }
-
-  publishReelBtn.disabled = true;
-  publishReelBtn.textContent = 'جاري الرفع والمعالجة...';
-
-  const fd = new FormData();
-  fd.append('file', file);
-
-  try {
-    const res = await fetch('/api/upload', { method: 'POST', body: fd });
-    const d = await res.json();
-
-    if (d.url) {
-      const postRes = await fetch('/api/reels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          creator: currentUser.username,
-          videoUrl: d.url,
-          caption
-        })
-      });
-      const postData = await postRes.json();
-
-      if (postData.success) {
-        createReelModal.classList.remove('active');
-        publishReelBtn.disabled = false;
-        publishReelBtn.textContent = 'نشر الفيديو';
-        loadReels();
-      }
-    }
-  } catch (err) {
-    alert('تعذر نشر الفيديو، يرجى المحاولة مرة أخرى');
-    publishReelBtn.disabled = false;
-    publishReelBtn.textContent = 'نشر الفيديو';
-  }
-});
-
-// Reel Comments
-window.openReelComments = function(reelId) {
-  activeReelCommentId = reelId;
-  const reel = reelsData.find(r => r.id === reelId);
-  if (!reel) return;
-
-  renderCommentsList(reel.comments || []);
-  reelCommentsModal.classList.add('active');
-};
-
-closeCommentsBtn.addEventListener('click', () => {
-  reelCommentsModal.classList.remove('active');
-  activeReelCommentId = null;
-});
-
-function renderCommentsList(comments) {
-  reelCommentsList.innerHTML = '';
-  if (comments.length === 0) {
-    reelCommentsList.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد تعليقات بعد. كن أول من يعلق!</div>';
-    return;
-  }
-
-  comments.forEach(c => {
-    const row = document.createElement('div');
-    row.className = 'comment-row';
-    row.innerHTML = `
-      <img src="${c.avatarUrl || '/avatars/avatar-1.svg'}" class="comment-avatar">
-      <div class="comment-bubble">
-        <div class="comment-author">${c.displayName || c.username}</div>
-        <div class="comment-text">${escapeHtml(c.text)}</div>
-      </div>
-    `;
-    reelCommentsList.appendChild(row);
-  });
-}
-
-sendCommentBtn.addEventListener('click', async () => {
-  if (!activeReelCommentId) return;
-  const text = newCommentInput.value.trim();
-  if (!text) return;
-
-  try {
-    const res = await fetch(`/api/reels/${activeReelCommentId}/comment`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: currentUser.username, text })
-    });
-    const d = await res.json();
-    if (d.success) {
-      newCommentInput.value = '';
-      const r = reelsData.find(x => x.id === activeReelCommentId);
-      if (r) {
-        if (!r.comments) r.comments = [];
-        r.comments.push(d.comment);
-        renderCommentsList(r.comments);
-      }
-    }
-  } catch (e) {}
-});
-
-// Share Reel into Chat
-window.openShareReelModal = function(reelId) {
-  activeShareReel = reelsData.find(r => r.id === reelId);
-  if (!activeShareReel) return;
-
-  shareFriendsList.innerHTML = '';
-  if (contacts.length === 0) {
-    shareFriendsList.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-muted);">لا يوجد أصدقاء في قائمتك بعد.</div>';
-  } else {
-    contacts.forEach(c => {
-      const btn = document.createElement('button');
-      btn.className = 'btn btn-secondary btn-block';
-      btn.style.marginBottom = '8px';
-      btn.innerHTML = `<img src="${c.avatarUrl}" style="width:24px;height:24px;border-radius:50%;"> <span>إرسال إلى ${c.displayName || c.username}</span>`;
-      btn.onclick = () => {
-        socket.emit('send_message', {
-          recipient: c.username,
-          type: 'text',
-          content: `🎬 شاهد هذا الريلز على ONYX:\n${activeShareReel.caption}\n${window.location.origin}${activeShareReel.videoUrl}`
-        });
-        alert(`تمت مشاركة الفيديو مع ${c.displayName || c.username}!`);
-        shareReelModal.classList.remove('active');
-      };
-      shareFriendsList.appendChild(btn);
-    });
-  }
-
-  shareReelModal.classList.add('active');
-};
-
-closeShareReelBtn.addEventListener('click', () => {
-  shareReelModal.classList.remove('active');
-});
-
-// -------------------------------------------------------------
-// PROFILE PAGE
-// -------------------------------------------------------------
-
-async function loadFullProfile() {
+async function loadProfile() {
   if (!currentUser) return;
 
   fullProfileAvatar.src = currentUser.avatarUrl || '/avatars/avatar-1.svg';
   fullProfileDisplayName.textContent = currentUser.displayName || currentUser.username;
   fullProfileUsername.textContent = '@' + currentUser.username;
-  fullProfileBio.textContent = currentUser.bio || 'مرحباً، أنا أستخدم Onyx Chat!';
+  fullProfileBio.textContent = currentUser.bio || 'مرحباً، أنا أستخدم ONYX CHAT!';
   fullProfileUserId.textContent = currentUser.userId || 'ID-00000';
-
-  editProfileNameInput.value = currentUser.displayName || '';
-  editProfileBioInput.value = currentUser.bio || '';
-  editProfileLangSelect.value = currentUser.language || 'ar';
 
   try {
     const res = await fetch(`/api/user-profile?identifier=${encodeURIComponent(currentUser.username)}`);
     const data = await res.json();
     if (data.user) {
+      profilePostsCount.textContent = data.user.postsCount || 0;
       profileFollowersCount.textContent = data.user.followersCount || 0;
       profileFollowingCount.textContent = data.user.followingCount || 0;
     }
   } catch (e) {}
 
-  loadLikedReelsSubtab();
+  loadProfileGrid('posts');
 }
 
 copyFullUserIdBtn.addEventListener('click', () => {
@@ -1496,95 +1616,89 @@ changeFullProfileAvatar.addEventListener('change', async (e) => {
     const d = await res.json();
     if (d.url) {
       fullProfileAvatar.src = d.url;
+      bnavAvatar.src = d.url;
       currentUser.avatarUrl = d.url;
-      currentUserAvatar.src = d.url;
       await fetch('/api/profile/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: currentUser.username, avatarUrl: d.url })
       });
-      localStorage.setItem('onyx_user_v3', JSON.stringify(currentUser));
+      localStorage.setItem('onyx_insta_user', JSON.stringify(currentUser));
     }
-  } catch (e) {
-    alert('تعذر تحديث الصورة');
-  }
+  } catch (e) {}
 });
 
-// Profile Subtabs
-profileTabBtns.forEach(btn => {
+gridTabBtns.forEach(btn => {
   btn.addEventListener('click', () => {
-    profileTabBtns.forEach(b => b.classList.remove('active'));
+    gridTabBtns.forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-
-    subtabLikedContent.classList.remove('active');
-    subtabMyReelsContent.classList.remove('active');
-    subtabSettingsContent.classList.remove('active');
-
-    const sub = btn.dataset.subtab;
-    if (sub === 'liked') {
-      subtabLikedContent.classList.add('active');
-      loadLikedReelsSubtab();
-    } else if (sub === 'myreels') {
-      subtabMyReelsContent.classList.add('active');
-      loadMyReelsSubtab();
-    } else if (sub === 'settings') {
-      subtabSettingsContent.classList.add('active');
-    }
+    loadProfileGrid(btn.dataset.subtab);
   });
 });
 
-async function loadLikedReelsSubtab() {
-  likedReelsGrid.innerHTML = '';
-  try {
-    const res = await fetch(`/api/reels/liked?username=${encodeURIComponent(currentUser.username)}`);
-    const data = await res.json();
-    const list = data.reels || [];
+async function loadProfileGrid(subtab) {
+  profileGridContent.innerHTML = '';
 
-    if (list.length === 0) {
-      likedReelsGrid.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding:30px;">لم تضع قلب لأي فيديو بعد.</div>';
+  if (subtab === 'posts') {
+    const myPosts = postsData.filter(p => p.creator.toLowerCase() === currentUser.username.toLowerCase());
+    if (myPosts.length === 0) {
+      profileGridContent.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:30px; color:var(--text-muted);">لا توجد منشورات بعد.</div>';
       return;
     }
-
-    list.forEach(r => {
-      const item = document.createElement('div');
-      item.className = 'reel-grid-item';
-      item.innerHTML = `
-        <video src="${r.videoUrl}"></video>
-        <div class="reel-grid-badge"><i data-lucide="heart" style="color:#f43f5e; fill:#f43f5e;"></i> ${r.likes ? r.likes.length : 0}</div>
-      `;
-      item.onclick = () => switchView('reels');
-      likedReelsGrid.appendChild(item);
+    myPosts.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'grid-thumb';
+      div.innerHTML = p.type === 'video' ? `<video src="${p.mediaUrl}"></video>` : `<img src="${p.mediaUrl}">`;
+      div.onclick = () => openImageModal(p.mediaUrl);
+      profileGridContent.appendChild(div);
     });
-    refreshIcons();
-  } catch (e) {}
-}
-
-async function loadMyReelsSubtab() {
-  myReelsGrid.innerHTML = '';
-  const myReels = reelsData.filter(r => r.creator.toLowerCase() === currentUser.username.toLowerCase());
-
-  if (myReels.length === 0) {
-    myReelsGrid.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding:30px;">لم تنشر أي ريلز بعد.</div>';
-    return;
+  } else if (subtab === 'myreels') {
+    const myReels = reelsData.filter(r => r.creator.toLowerCase() === currentUser.username.toLowerCase());
+    if (myReels.length === 0) {
+      profileGridContent.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:30px; color:var(--text-muted);">لا توجد مقاطع ريلز بعد.</div>';
+      return;
+    }
+    myReels.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'grid-thumb';
+      div.innerHTML = `<video src="${r.videoUrl}"></video>`;
+      div.onclick = () => switchView('reels');
+      profileGridContent.appendChild(div);
+    });
+  } else if (subtab === 'liked') {
+    try {
+      const res = await fetch(`/api/reels/liked?username=${encodeURIComponent(currentUser.username)}`);
+      const data = await res.json();
+      const list = data.reels || [];
+      if (list.length === 0) {
+        profileGridContent.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:30px; color:var(--text-muted);">لم تقم بوضع قلب لأي محتوى بعد.</div>';
+        return;
+      }
+      list.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'grid-thumb';
+        div.innerHTML = `<video src="${r.videoUrl}"></video>`;
+        div.onclick = () => switchView('reels');
+        profileGridContent.appendChild(div);
+      });
+    } catch (e) {}
   }
-
-  myReels.forEach(r => {
-    const item = document.createElement('div');
-    item.className = 'reel-grid-item';
-    item.innerHTML = `
-      <video src="${r.videoUrl}"></video>
-      <div class="reel-grid-badge"><i data-lucide="heart"></i> ${r.likes ? r.likes.length : 0}</div>
-    `;
-    item.onclick = () => switchView('reels');
-    myReelsGrid.appendChild(item);
-  });
-  refreshIcons();
 }
 
-saveProfileSettingsBtn.addEventListener('click', async () => {
-  const newName = editProfileNameInput.value.trim();
-  const newBio = editProfileBioInput.value.trim();
-  const newLang = editProfileLangSelect.value;
+// Edit Profile Modal
+openEditProfileModalBtn.addEventListener('click', () => {
+  editNameInput.value = currentUser.displayName || '';
+  editBioInput.value = currentUser.bio || '';
+  editLangSelect.value = currentUser.language || 'ar';
+  editProfileModal.classList.add('active');
+});
+
+cancelEditProfileBtn.addEventListener('click', () => editProfileModal.classList.remove('active'));
+
+saveEditProfileBtn.addEventListener('click', async () => {
+  const newName = editNameInput.value.trim();
+  const newBio = editBioInput.value.trim();
+  const newLang = editLangSelect.value;
 
   try {
     const res = await fetch('/api/profile/update', {
@@ -1600,12 +1714,11 @@ saveProfileSettingsBtn.addEventListener('click', async () => {
     const d = await res.json();
     if (d.success) {
       setCurrentUser(d.user);
-      loadFullProfile();
-      alert('تم حفظ الإعدادات بنجاح!');
+      editProfileModal.classList.remove('active');
+      loadProfile();
+      alert('تم حفظ البيانات بنجاح!');
     }
-  } catch (e) {
-    alert('تعذر حفظ البيانات');
-  }
+  } catch (e) {}
 });
 
 // Follow toggle helper
@@ -1615,24 +1728,19 @@ window.toggleFollowUser = async function(targetUsername) {
     const res = await fetch('/api/follow/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        currentUsername: currentUser.username,
-        targetUsername
-      })
+      body: JSON.stringify({ currentUsername: currentUser.username, targetUsername })
     });
     const d = await res.json();
     if (d.success) {
       alert(d.isFollowing ? `أصبحت الآن تتابع ${targetUsername}` : `ألغيت متابعة ${targetUsername}`);
+      loadPosts();
       loadReels();
     }
   } catch (e) {}
 };
 
-// -------------------------------------------------------------
-// CONTACT PROFILE & UNFRIEND
-// -------------------------------------------------------------
-
-async function openContactProfile(identifier) {
+// Contact Profile
+window.openContactProfile = async function(identifier) {
   if (!identifier || identifier === 'global') return;
   activeContactViewing = identifier;
 
@@ -1644,38 +1752,21 @@ async function openContactProfile(identifier) {
       const u = data.user;
       viewContactAvatar.src = u.avatarUrl || '/avatars/avatar-1.svg';
       viewContactName.textContent = u.displayName || u.username;
-      viewContactBio.textContent = u.bio || 'مستخدم على Onyx Chat';
+      viewContactBio.textContent = u.bio || 'مستخدم على ONYX CHAT';
       viewContactUsername.textContent = '@' + u.username;
       viewContactUserId.textContent = u.userId || '---';
       viewContactFollowers.textContent = u.followersCount || 0;
 
-      if (u.online) {
-        viewContactStatusBadge.textContent = 'متصل الآن (Online)';
-        viewContactStatusBadge.className = 'status-badge online';
-      } else {
-        viewContactStatusBadge.textContent = 'غير متصل';
-        viewContactStatusBadge.className = 'status-badge';
-      }
-
+      viewContactStatusBadge.textContent = u.online ? 'متصل الآن' : 'غير متصل';
+      viewContactStatusBadge.className = `status-badge ${u.online ? 'online' : ''}`;
       followContactBtn.textContent = u.isFollowing ? 'إلغاء المتابعة' : '+ متابعة';
+
       contactProfileModal.classList.add('active');
     }
-  } catch (err) {
-    alert('تعذر عرض بيانات الصديق');
-  }
-}
+  } catch (e) {}
+};
 
-chatHeaderContactInfo.addEventListener('click', () => {
-  if (activeRecipient && activeRecipient !== 'global') openContactProfile(activeRecipient);
-});
-
-viewProfileFromHeaderBtn.addEventListener('click', () => {
-  if (activeRecipient && activeRecipient !== 'global') openContactProfile(activeRecipient);
-});
-
-closeContactProfileBtn.addEventListener('click', () => {
-  contactProfileModal.classList.remove('active');
-});
+closeContactProfileBtn.addEventListener('click', () => contactProfileModal.classList.remove('active'));
 
 followContactBtn.addEventListener('click', async () => {
   if (!activeContactViewing) return;
@@ -1685,46 +1776,31 @@ followContactBtn.addEventListener('click', async () => {
 
 deleteFriendBtn.addEventListener('click', async () => {
   if (!activeContactViewing) return;
-  if (!confirm(`هل تريد بالتأكيد حذف ${activeContactViewing} من قائمة أصدقائك؟`)) return;
+  if (!confirm(`حذف ${activeContactViewing} من أصدقائك؟`)) return;
 
   try {
     const res = await fetch('/api/contacts/remove', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: currentUser.username,
-        targetUsername: activeContactViewing
-      })
+      body: JSON.stringify({ username: currentUser.username, targetUsername: activeContactViewing })
     });
     const d = await res.json();
     if (d.success) {
       contactProfileModal.classList.remove('active');
-      activeRecipient = null;
-      noChatPlaceholder.style.display = 'block';
-      messagesList.style.display = 'none';
-      chatHeaderActions.style.display = 'none';
-      activeChatName.textContent = 'اختر شخصاً للتحدث معه';
       loadContacts();
     }
-  } catch (e) {
-    alert('تعذر حذف الصديق');
-  }
+  } catch (e) {}
 });
 
-// -------------------------------------------------------------
-// ADD FRIEND MODAL
-// -------------------------------------------------------------
-
-openAddContactBtn.addEventListener('click', () => {
+// Add Friend Modal
+directAddFriendBtn.addEventListener('click', () => {
   newContactInput.value = '';
   contactError.style.display = 'none';
   addContactModal.classList.add('active');
   newContactInput.focus();
 });
 
-cancelAddContactBtn.addEventListener('click', () => {
-  addContactModal.classList.remove('active');
-});
+cancelAddContactBtn.addEventListener('click', () => addContactModal.classList.remove('active'));
 
 confirmAddContactBtn.addEventListener('click', async () => {
   const targetId = newContactInput.value.trim();
@@ -1734,10 +1810,7 @@ confirmAddContactBtn.addEventListener('click', async () => {
     const res = await fetch('/api/contacts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: currentUser.username,
-        identifier: targetId
-      })
+      body: JSON.stringify({ username: currentUser.username, identifier: targetId })
     });
     const data = await res.json();
 
@@ -1749,27 +1822,15 @@ confirmAddContactBtn.addEventListener('click', async () => {
       contactError.textContent = data.error || 'تعذر إضافة الصديق';
       contactError.style.display = 'block';
     }
-  } catch (err) {
-    contactError.textContent = 'حدث خطأ أثناء البحث';
+  } catch (e) {
+    contactError.textContent = 'حدث خطأ في البحث';
     contactError.style.display = 'block';
   }
 });
 
-newContactInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') confirmAddContactBtn.click();
-});
-
-// -------------------------------------------------------------
-// THEMES & WALLPAPER
-// -------------------------------------------------------------
-
-openChatThemeSettingsBtn.addEventListener('click', () => {
-  chatSettingsModal.classList.add('active');
-});
-
-closeChatSettingsBtn.addEventListener('click', () => {
-  chatSettingsModal.classList.remove('active');
-});
+// Chat Themes & Wallpaper
+openChatThemeSettingsBtn.addEventListener('click', () => chatSettingsModal.classList.add('active'));
+closeChatSettingsBtn.addEventListener('click', () => chatSettingsModal.classList.remove('active'));
 
 function applyTheme(themeName) {
   document.body.dataset.theme = themeName;
@@ -1781,15 +1842,15 @@ function applyTheme(themeName) {
 
 themeOptions.forEach(opt => {
   opt.addEventListener('click', async () => {
-    const chosenTheme = opt.dataset.themeVal;
-    applyTheme(chosenTheme);
+    const t = opt.dataset.themeVal;
+    applyTheme(t);
     if (currentUser) {
-      currentUser.theme = chosenTheme;
-      localStorage.setItem('onyx_user_v3', JSON.stringify(currentUser));
+      currentUser.theme = t;
+      localStorage.setItem('onyx_insta_user', JSON.stringify(currentUser));
       await fetch('/api/profile/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: currentUser.username, theme: chosenTheme })
+        body: JSON.stringify({ username: currentUser.username, theme: t })
       });
     }
   });
@@ -1808,25 +1869,23 @@ wallpaperUploadInput.addEventListener('change', async (e) => {
       messagesViewport.style.backgroundImage = `url("${data.url}")`;
       if (currentUser) {
         currentUser.chatWallpaper = data.url;
-        localStorage.setItem('onyx_user_v3', JSON.stringify(currentUser));
+        localStorage.setItem('onyx_insta_user', JSON.stringify(currentUser));
         await fetch('/api/profile/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: currentUser.username, chatWallpaper: data.url })
         });
       }
-      alert('تم تعيين خلفية المحادثة بنجاح!');
+      alert('تم تعيين خلفية المحادثة!');
     }
-  } catch (err) {
-    alert('تعذر تعيين الخلفية');
-  }
+  } catch (e) {}
 });
 
 resetWallpaperBtn.addEventListener('click', async () => {
   messagesViewport.style.backgroundImage = '';
   if (currentUser) {
     currentUser.chatWallpaper = null;
-    localStorage.setItem('onyx_user_v3', JSON.stringify(currentUser));
+    localStorage.setItem('onyx_insta_user', JSON.stringify(currentUser));
     await fetch('/api/profile/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1838,7 +1897,7 @@ resetWallpaperBtn.addEventListener('click', async () => {
 
 deleteChatBtn.addEventListener('click', async () => {
   if (!activeRecipient) return;
-  if (!confirm(`هل تريد بالتأكيد حذف كل الرسائل في المحادثة مع "${activeRecipient}"؟`)) return;
+  if (!confirm(`حذف جميع رسائل المحادثة مع "${activeRecipient}"؟`)) return;
 
   try {
     const res = await fetch('/api/conversation/delete', {
@@ -1852,9 +1911,7 @@ deleteChatBtn.addEventListener('click', async () => {
       chatSettingsModal.classList.remove('active');
       loadContacts();
     }
-  } catch (e) {
-    alert('تعذر مسح المحادثة');
-  }
+  } catch (e) {}
 });
 
 // Lightbox
@@ -1862,11 +1919,8 @@ window.openImageModal = function(url) {
   lightboxImg.src = url;
   lightbox.classList.add('active');
 };
-
 closeLightbox.addEventListener('click', () => lightbox.classList.remove('active'));
-lightbox.addEventListener('click', (e) => {
-  if (e.target === lightbox) lightbox.classList.remove('active');
-});
+lightbox.addEventListener('click', (e) => { if (e.target === lightbox) lightbox.classList.remove('active'); });
 
-// Launch App
+// Start
 init();

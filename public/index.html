@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ONYX CHAT - محادثات مشفرة وريلز</title>
+  <title>ONYX CHAT - المنصة الاجتماعية والمحادثات</title>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/png" href="logo.png">
   <!-- Google Fonts: Cairo -->
@@ -15,17 +15,17 @@
 </head>
 <body data-theme="onyx-purple" data-lang="ar">
 
-  <!-- ================= IN-APP CODE NOTIFICATION TOAST ================= -->
+  <!-- ================= IN-APP VERIFICATION NOTIFICATION ================= -->
   <div id="codeNotificationToast" class="code-toast" style="display: none;">
-    <div class="toast-icon"><i data-lucide="bell"></i></div>
+    <div class="toast-icon"><i data-lucide="mail"></i></div>
     <div class="toast-body">
-      <strong id="toastTitle">كود التحقق الخاص بك</strong>
-      <p id="toastMessage">وصلك كود التحقق: <span id="toastCode" class="toast-highlight">000000</span></p>
+      <strong id="toastTitle">كود التحقق لحسابك في ONYX</strong>
+      <p id="toastMessage">وصلك الرمز: <span id="toastCode" class="toast-highlight">000000</span></p>
     </div>
-    <button id="toastCopyBtn" class="toast-action" title="نسخ الكود">نسخ واستخدام</button>
+    <button id="toastCopyBtn" class="toast-action">استخدام الكود</button>
   </div>
 
-  <!-- ================= AUTH MODAL (LOGIN / REGISTER WITH CODE) ================= -->
+  <!-- ================= AUTH MODAL (INSTAGRAM & ONYX STYLE) ================= -->
   <div id="authModal" class="modal-overlay active">
     <div class="modal-card auth-card">
       <div class="modal-header">
@@ -33,19 +33,34 @@
           <img src="logo.png" alt="ONYX CHAT" class="brand-logo">
         </div>
         <h2 class="brand-title">ONYX CHAT</h2>
-        <p class="brand-subtitle" data-i18n="authSubtitle">محادثات راقية مشفرة، مكالمات، وريلز فيديو</p>
+        <p class="brand-subtitle">منصة التواصل الاجتماعي والمحادثات المشفرة</p>
       </div>
 
-      <!-- Auth Tabs Switcher -->
+      <!-- Quick Google Sign-In Option -->
+      <div class="google-auth-box">
+        <button id="googleSignInBtn" class="btn btn-google btn-block">
+          <svg width="20" height="20" viewBox="0 0 48 48">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          <span>المتابعة باستخدام حساب Google (Gmail)</span>
+        </button>
+      </div>
+
+      <div class="auth-divider"><span>أو التسجيل العادي</span></div>
+
+      <!-- Auth Switcher Tabs -->
       <div class="auth-tabs">
-        <button id="tabLoginBtn" class="auth-tab-btn active" data-i18n="tabLogin">تسجيل الدخول</button>
-        <button id="tabRegisterBtn" class="auth-tab-btn" data-i18n="tabRegister">إنشاء حساب جديد</button>
+        <button id="tabLoginBtn" class="auth-tab-btn active">تسجيل الدخول</button>
+        <button id="tabRegisterBtn" class="auth-tab-btn">إنشاء حساب جديد</button>
       </div>
 
       <!-- LOGIN FORM -->
       <form id="loginForm" class="auth-form" onsubmit="return false;">
         <div class="input-group">
-          <label data-i18n="labelUsernameOrContact">اسم المستخدم / الجيمايل / الهاتف:</label>
+          <label>اسم المستخدم، الجيمايل، أو الهاتف:</label>
           <div class="input-field">
             <i data-lucide="user"></i>
             <input type="text" id="loginUsername" placeholder="Username, Gmail or Phone..." required>
@@ -53,7 +68,7 @@
         </div>
 
         <div class="input-group">
-          <label data-i18n="labelPassword">كلمة المرور:</label>
+          <label>كلمة المرور:</label>
           <div class="input-field">
             <i data-lucide="lock"></i>
             <input type="password" id="loginPassword" placeholder="••••••••" required>
@@ -63,18 +78,17 @@
         <div id="loginError" class="error-msg"></div>
 
         <button id="submitLoginBtn" class="btn btn-primary btn-block">
-          <span data-i18n="btnLogin">دخول إلى ONYX CHAT</span>
+          <span>دخول إلى حسابي</span>
           <i data-lucide="arrow-left"></i>
         </button>
       </form>
 
-      <!-- REGISTER FORM WITH VERIFICATION -->
+      <!-- REGISTER FORM WITH GMAIL / PHONE VERIFICATION -->
       <form id="registerForm" class="auth-form" style="display: none;" onsubmit="return false;">
         
-        <!-- Registration Method -->
         <div class="method-toggle">
           <button type="button" class="method-btn active" id="methodEmailBtn">
-            <i data-lucide="mail"></i> <span>Gmail / بريد إلكتروني</span>
+            <i data-lucide="mail"></i> <span>البريد الإلكتروني (Gmail)</span>
           </button>
           <button type="button" class="method-btn" id="methodPhoneBtn">
             <i data-lucide="phone"></i> <span>رقم الهاتف</span>
@@ -82,7 +96,7 @@
         </div>
 
         <div class="input-group">
-          <label id="contactInputLabel">البريد الإلكتروني (Gmail):</label>
+          <label id="contactInputLabel">بريدك الإلكتروني (Gmail):</label>
           <div class="input-field-with-btn">
             <div class="input-field">
               <i data-lucide="at-sign" id="contactInputIcon"></i>
@@ -94,17 +108,17 @@
           </div>
         </div>
 
-        <!-- Verification Code Input -->
+        <!-- Verification Code Section -->
         <div class="input-group" id="codeGroup" style="display: none;">
-          <label style="color: #c084fc;">أدخل كود التحقق المكون من 6 أرقام:</label>
+          <label style="color: #c084fc;">كود التحقق (أدخله لتأكيد الحساب):</label>
           <div class="input-field code-input-field">
             <i data-lucide="key"></i>
             <input type="text" id="registerCodeInput" placeholder="123456" maxlength="6">
           </div>
-          <small class="code-hint">سيصلك تنبيه فوري بالرمز أدخله للمتابعة.</small>
+          <small class="code-hint">تم إرسال كود التحقق وسيصلك في بريدك أو في التنبيه بالأعلى.</small>
         </div>
 
-        <!-- Details -->
+        <!-- User Profile Details -->
         <div id="registerDetailsSection" style="display: none;">
           <div class="avatar-preview-wrapper">
             <img id="registerAvatarPreview" src="/avatars/avatar-1.svg" alt="الصورة">
@@ -132,7 +146,7 @@
           </div>
 
           <div class="input-group">
-            <label>اسم المستخدم للبحث (Username):</label>
+            <label>اسم المستخدم (Username بالإنجليزية):</label>
             <div class="input-field">
               <i data-lucide="at-sign"></i>
               <input type="text" id="registerUsername" placeholder="مثال: youcef99">
@@ -151,7 +165,7 @@
             <label>نبذة عنك (Bio):</label>
             <div class="input-field">
               <i data-lucide="feather"></i>
-              <input type="text" id="registerBio" placeholder="اكتب نبذة قصيرة عنك..." value="مرحباً، أنا أستخدم Onyx Chat!">
+              <input type="text" id="registerBio" placeholder="اكتب نبذة عنك..." value="مرحباً، أنا أستخدم ONYX CHAT!">
             </div>
           </div>
 
@@ -167,103 +181,165 @@
     </div>
   </div>
 
-  <!-- ================= MAIN APP VIEW ================= -->
-  <div class="app-layout">
+  <!-- ================= INSTAGRAM-STYLE APP LAYOUT ================= -->
+  <div class="insta-app">
     
-    <!-- Top Navigation Bar (Chats, Reels, Profile) -->
-    <nav class="app-topbar">
-      <div class="topbar-brand" id="brandHomeBtn">
-        <img src="logo.png" alt="Onyx Logo" class="topbar-logo">
-        <span class="topbar-title">ONYX CHAT</span>
+    <!-- TOP INSTAGRAM APP HEADER -->
+    <header class="insta-header">
+      <div class="insta-logo-box" id="logoHomeBtn">
+        <img src="logo.png" alt="ONYX Logo" class="insta-logo-img">
+        <span class="insta-logo-text">ONYX CHAT</span>
       </div>
 
-      <div class="topbar-nav">
-        <button class="nav-tab active" data-view="chats">
-          <i data-lucide="message-square"></i>
-          <span data-i18n="navChats">المحادثات</span>
+      <div class="insta-header-actions">
+        <!-- New Post / Reel -->
+        <button id="headerCreateBtn" class="btn-icon" title="نشر جديد">
+          <i data-lucide="plus-square"></i>
         </button>
-        <button class="nav-tab" data-view="reels">
-          <i data-lucide="play-square"></i>
-          <span data-i18n="navReels">الريلز (Reels)</span>
+        <!-- Direct Messages Shortcut -->
+        <button id="headerDirectBtn" class="btn-icon direct-shortcut-btn" title="الرسائل والمحادثات">
+          <i data-lucide="message-circle"></i>
+          <span class="badge-dot" id="unreadBadgeDot"></span>
         </button>
-        <button class="nav-tab" data-view="profile">
-          <i data-lucide="user"></i>
-          <span data-i18n="navProfile">ملفي الشخصي</span>
-        </button>
-      </div>
-
-      <div class="topbar-end">
-        <!-- Language Switcher Pill -->
-        <button id="langToggleBtn" class="btn-lang" title="تغيير اللغة (Change Language)">
+        <!-- Language Switcher -->
+        <button id="langToggleBtn" class="btn-lang" title="تبديل اللغة">
           <i data-lucide="globe"></i>
           <span id="currentLangLabel">العربية</span>
         </button>
       </div>
-    </nav>
+    </header>
 
-    <!-- CONTENT VIEWS WRAPPER -->
-    <div class="views-wrapper">
+    <!-- MAIN VIEW AREA -->
+    <main class="insta-main-content">
       
-      <!-- ================= VIEW 1: CHATS VIEW ================= -->
-      <section id="chatsView" class="app-view active">
-        <div class="app-container">
+      <!-- ================= 1. HOME FEED (الرئيسية مع القصص والمنشورات) ================= -->
+      <section id="viewHome" class="insta-view active">
+        
+        <!-- STORIES BAR -->
+        <div class="stories-bar">
+          <!-- My Story Circle -->
+          <div class="story-item" id="addMyStoryBtn">
+            <div class="story-avatar-wrap my-story">
+              <img id="myStoryAvatar" src="/avatars/avatar-1.svg" alt="أنا">
+              <span class="add-story-badge"><i data-lucide="plus"></i></span>
+            </div>
+            <span class="story-username">قصتك</span>
+          </div>
+
+          <!-- Friends Stories (Populated dynamically) -->
+          <div id="storiesList" class="stories-scroll"></div>
+        </div>
+
+        <!-- POSTS FEED CONTAINER -->
+        <div class="posts-feed" id="postsFeed">
+          <!-- Dynamic posts populate here -->
+        </div>
+
+      </section>
+
+      <!-- ================= 2. EXPLORE VIEW (استكشاف وبحث عن أصدقاء بالمعرف) ================= -->
+      <section id="viewExplore" class="insta-view">
+        <div class="explore-container">
           
-          <!-- SIDEBAR -->
-          <aside class="sidebar" id="sidebar">
-            <!-- Current User Mini Card -->
-            <div class="sidebar-user" id="openProfileFromSidebar">
-              <div class="user-info">
-                <div class="avatar-container">
-                  <img id="currentUserAvatar" src="/avatars/avatar-1.svg" alt="أنا">
-                  <span class="status-indicator online"></span>
-                </div>
-                <div class="user-details">
-                  <h4 id="currentUserName">المستخدم</h4>
-                  <span class="user-tag" id="currentUserTag">ID-00000</span>
-                </div>
-              </div>
-              <button id="logoutBtn" class="btn-icon" title="تسجيل الخروج">
-                <i data-lucide="log-out"></i>
-              </button>
-            </div>
+          <!-- Search Header -->
+          <div class="explore-search-bar">
+            <i data-lucide="search"></i>
+            <input type="text" id="exploreSearchInput" placeholder="ابحث برمز المعرف (User ID) أو اسم المستخدم...">
+            <button id="exploreSearchBtn" class="btn btn-primary">بحث</button>
+          </div>
 
-            <!-- Add Friend Button -->
-            <div class="sidebar-actions">
-              <button id="openAddContactBtn" class="btn btn-add">
+          <!-- Search Result Card -->
+          <div id="searchResultCard" class="user-search-result" style="display: none;"></div>
+
+          <!-- Explore Grid of Posts -->
+          <h4 class="explore-title">المحتوى الرائج والمكتشف</h4>
+          <div class="explore-grid" id="exploreGrid"></div>
+        </div>
+      </section>
+
+      <!-- ================= 3. CREATE VIEW (نشر منشور / ريلز / قصة) ================= -->
+      <section id="viewCreate" class="insta-view">
+        <div class="create-card">
+          <div class="create-type-tabs">
+            <button class="create-tab-btn active" data-type="post">
+              <i data-lucide="image"></i> <span>منشور جديد (Post)</span>
+            </button>
+            <button class="create-tab-btn" data-type="reel">
+              <i data-lucide="play-square"></i> <span>ريلز فيديو (Reel)</span>
+            </button>
+            <button class="create-tab-btn" data-type="story">
+              <i data-lucide="circle-dashed"></i> <span>قصة (Story)</span>
+            </button>
+          </div>
+
+          <div class="create-upload-box" id="createUploadDropzone">
+            <i data-lucide="upload-cloud"></i>
+            <span id="createUploadFileName">اضغط هنا لاختيار صورة أو مقطع فيديو</span>
+            <input type="file" id="createFileInput" accept="image/*,video/*" style="display: none;">
+          </div>
+
+          <div class="input-group" id="captionGroup">
+            <label>وصف المنشور أو الكابشن (Caption):</label>
+            <div class="input-field">
+              <i data-lucide="edit-3"></i>
+              <input type="text" id="createCaptionInput" placeholder="اكتب وصفاً أو هاشتاقات...">
+            </div>
+          </div>
+
+          <button id="submitCreateBtn" class="btn btn-primary btn-block">
+            <i data-lucide="send"></i> <span>مشاركة ونشر الآن</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= 4. REELS VIEW (الريلز العمودية الكاملة) ================= -->
+      <section id="viewReels" class="insta-view">
+        <div class="insta-reels-wrapper">
+          <div class="reels-feed" id="reelsFeed">
+            <!-- Fullscreen-style reels populate here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 5. DIRECT MESSAGES VIEW (المحادثات الخاصة والشات) ================= -->
+      <section id="viewDirect" class="insta-view">
+        <div class="direct-container">
+          
+          <!-- Direct Sidebar / Contacts List -->
+          <div class="direct-sidebar" id="directSidebar">
+            <div class="direct-sidebar-header">
+              <h3 id="directHeaderUsername">الرسائل الخاصة</h3>
+              <button id="directAddFriendBtn" class="btn-icon" title="إضافة صديق برمز المعرف">
                 <i data-lucide="user-plus"></i>
-                <span data-i18n="addFriendBtn">إضافة صديق برمز المعرف</span>
               </button>
             </div>
 
-            <!-- Tabs: Contacts vs Global Lounge -->
+            <!-- Tabs: Contacts vs Lounge -->
             <div class="chat-tabs">
               <button class="tab-btn active" data-tab="contacts">
-                <i data-lucide="users"></i> <span data-i18n="tabContacts">جهات الاتصال</span>
+                <i data-lucide="users"></i> جهات الاتصال
               </button>
               <button class="tab-btn" data-tab="global">
-                <i data-lucide="globe"></i> <span data-i18n="tabGlobal">الغرفة العامة</span>
+                <i data-lucide="globe"></i> الغرفة العامة
               </button>
             </div>
 
-            <!-- Contacts List -->
             <div class="contacts-list" id="contactsList"></div>
-          </aside>
+          </div>
 
-          <!-- CHAT CONVERSATION AREA -->
-          <main class="chat-area" id="chatArea">
+          <!-- Direct Chat Screen -->
+          <div class="direct-chat-area" id="directChatArea">
             
             <!-- Chat Header -->
-            <header class="chat-header">
-              <div class="chat-header-contact" id="chatHeaderContactInfo" title="عرض ملف الصديق">
-                <button id="backToSidebarBtn" class="btn-icon mobile-only" title="رجوع">
-                  <i data-lucide="arrow-right"></i>
-                </button>
+            <div class="direct-chat-header">
+              <div class="direct-chat-user" id="directChatUserInfo">
+                <button id="directBackToSidebar" class="btn-icon mobile-only"><i data-lucide="arrow-right"></i></button>
                 <div class="avatar-container">
                   <img id="activeChatAvatar" src="/avatars/avatar-1.svg" alt="المحادثة">
                   <span id="activeChatStatusIndicator" class="status-indicator"></span>
                 </div>
-                <div class="contact-meta">
-                  <h3 id="activeChatName">اختر شخصاً للتحدث معه</h3>
+                <div>
+                  <h4 id="activeChatName">اختر شخصاً</h4>
                   <div class="chat-encryption-badge">
                     <i data-lucide="shield-check"></i>
                     <span id="activeChatStatus">محادثة مشفرة ومحمية</span>
@@ -271,7 +347,7 @@
                 </div>
               </div>
 
-              <!-- Header Action Buttons: Audio Call, Video Call, Settings, Profile -->
+              <!-- Header Call Buttons -->
               <div class="chat-header-actions" id="chatHeaderActions" style="display: none;">
                 <button id="startAudioCallBtn" class="btn-icon call-btn" title="مكالمة صوتية">
                   <i data-lucide="phone"></i>
@@ -282,18 +358,18 @@
                 <button id="openChatThemeSettingsBtn" class="btn-icon" title="المظهر والثيمات">
                   <i data-lucide="palette"></i>
                 </button>
-                <button id="viewProfileFromHeaderBtn" class="btn-icon" title="عرض الملف الشخصي">
+                <button id="viewProfileFromHeaderBtn" class="btn-icon" title="عرض البروفايل">
                   <i data-lucide="user"></i>
                 </button>
               </div>
-            </header>
+            </div>
 
             <!-- Messages Viewport -->
             <div class="messages-viewport" id="messagesViewport">
               <div class="no-chat-placeholder" id="noChatPlaceholder">
-                <img src="logo.png" alt="Onyx Logo" class="placeholder-logo">
-                <h3>مرحباً بك في ONYX CHAT</h3>
-                <p>تواصل في بيئة هادئة ومحمية. يمكنك إرسال الرسائل، الصور، الفوكال، وإجراء المكالمات الصوتية والمرئية فوراً.</p>
+                <img src="logo.png" alt="ONYX Logo" class="placeholder-logo">
+                <h3>ONYX DIRECT</h3>
+                <p>محادثاتك الشخصية مشفرة بالكامل. يمكنك تبادل الرسائل، الصور، الفوكال، والمكالمات في خصوصية تامة.</p>
               </div>
               <div class="messages-list" id="messagesList" style="display: none;"></div>
             </div>
@@ -304,30 +380,25 @@
               <small id="typingText">يكتب الآن...</small>
             </div>
 
-            <!-- Input Bar -->
-            <footer class="chat-input-bar" id="chatInputBar">
+            <!-- Direct Chat Input Bar -->
+            <div class="chat-input-bar">
               <div class="input-controls" id="normalControls">
-                <!-- Attach Image -->
                 <label for="imageUploadInput" class="btn-icon" title="إرسال صورة">
                   <i data-lucide="image"></i>
                 </label>
                 <input type="file" id="imageUploadInput" accept="image/*" style="display: none;">
 
-                <!-- Text Input -->
                 <input type="text" id="messageInput" placeholder="اكتب رسالة مشفرة..." autocomplete="off">
 
-                <!-- Send Button -->
                 <button id="sendBtn" class="btn-icon btn-send" title="إرسال">
                   <i data-lucide="send"></i>
                 </button>
 
-                <!-- Record Vocal Button -->
                 <button id="recordVocalBtn" class="btn-icon btn-mic" title="تسجيل فوكال">
                   <i data-lucide="mic"></i>
                 </button>
               </div>
 
-              <!-- Vocal Recording Bar -->
               <div class="recording-bar" id="recordingBar" style="display: none;">
                 <div class="recording-info">
                   <span class="recording-dot"></span>
@@ -339,215 +410,171 @@
                   <span class="recording-label">جاري تسجيل الفوكال...</span>
                 </div>
                 <div class="recording-actions">
-                  <button id="cancelRecordBtn" class="btn-round btn-cancel" title="إلغاء">
-                    <i data-lucide="trash-2"></i>
-                  </button>
-                  <button id="sendRecordBtn" class="btn-round btn-success" title="إرسال">
-                    <i data-lucide="arrow-up"></i>
-                  </button>
+                  <button id="cancelRecordBtn" class="btn-round btn-cancel" title="إلغاء"><i data-lucide="trash-2"></i></button>
+                  <button id="sendRecordBtn" class="btn-round btn-success" title="إرسال"><i data-lucide="arrow-up"></i></button>
                 </div>
               </div>
-            </footer>
+            </div>
 
-          </main>
+          </div>
         </div>
       </section>
 
-      <!-- ================= VIEW 2: REELS FEED (ريلز وفيديوهات) ================= -->
-      <section id="reelsView" class="app-view">
-        <div class="reels-container">
+      <!-- ================= 6. INSTAGRAM PROFILE VIEW (الملف الشخصي الرسمي) ================= -->
+      <section id="viewProfile" class="insta-view">
+        <div class="insta-profile-container">
           
-          <!-- Top bar inside Reels: Create Reel Button -->
-          <div class="reels-top-action">
-            <button id="openCreateReelBtn" class="btn btn-primary btn-glow">
-              <i data-lucide="plus-circle"></i>
-              <span>نشر ريلز جديد</span>
-            </button>
-          </div>
-
-          <!-- Reels Feed Scroll View -->
-          <div class="reels-feed" id="reelsFeed">
-            <!-- Dynamically populated reels -->
-          </div>
-
-        </div>
-      </section>
-
-      <!-- ================= VIEW 3: USER FULL PROFILE ================= -->
-      <section id="profileView" class="app-view">
-        <div class="profile-page-card">
-          
-          <div class="profile-banner">
-            <div class="profile-avatar-giant-wrapper">
-              <img id="fullProfileAvatar" src="/avatars/avatar-1.svg" alt="الصورة">
+          <!-- Profile Top Header -->
+          <div class="insta-profile-header">
+            <!-- Avatar with Story Ring -->
+            <div class="profile-avatar-story-wrap">
+              <img id="fullProfileAvatar" src="/avatars/avatar-1.svg" alt="Profile">
               <label for="changeFullProfileAvatar" class="avatar-change-badge" title="تغيير الصورة">
                 <i data-lucide="camera"></i>
               </label>
               <input type="file" id="changeFullProfileAvatar" accept="image/*" style="display: none;">
             </div>
+
+            <!-- Stats: Posts, Followers, Following -->
+            <div class="profile-stats-group">
+              <div class="stat-col">
+                <span class="stat-num" id="profilePostsCount">0</span>
+                <span class="stat-label">منشورات</span>
+              </div>
+              <div class="stat-col">
+                <span class="stat-num" id="profileFollowersCount">0</span>
+                <span class="stat-label">متابعون</span>
+              </div>
+              <div class="stat-col">
+                <span class="stat-num" id="profileFollowingCount">0</span>
+                <span class="stat-label">أتابعهم</span>
+              </div>
+            </div>
           </div>
 
-          <div class="profile-meta-header">
-            <h2 id="fullProfileDisplayName">الاسم الظاهر</h2>
-            <p class="profile-username" id="fullProfileUsername">@username</p>
-            <p class="profile-bio" id="fullProfileBio">نبذة عن المستخدم...</p>
-            
-            <!-- User ID Box with Copy Button -->
-            <div class="user-id-box-page">
-              <span>رمز المعرف الخاص بك (User ID):</span>
+          <!-- Bio & User ID Section -->
+          <div class="profile-bio-box">
+            <h3 id="fullProfileDisplayName">الاسم</h3>
+            <span class="profile-handle" id="fullProfileUsername">@username</span>
+            <p class="profile-bio-text" id="fullProfileBio">مرحباً، أنا أستخدم ONYX CHAT!</p>
+
+            <!-- User ID Pill with 1-Click Copy -->
+            <div class="user-id-pill">
+              <span>رمز المعرف:</span>
               <strong id="fullProfileUserId">ID-00000</strong>
               <button id="copyFullUserIdBtn" class="btn-copy">
-                <i data-lucide="copy"></i> <span>نسخ المعرف</span>
-              </button>
-            </div>
-
-            <!-- Stats: Followers & Following -->
-            <div class="profile-stats-row">
-              <div class="stat-box">
-                <span class="stat-num" id="profileFollowersCount">0</span>
-                <span class="stat-label">المتابعون (Followers)</span>
-              </div>
-              <div class="stat-box">
-                <span class="stat-num" id="profileFollowingCount">0</span>
-                <span class="stat-label">أتابعهم (Following)</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Profile Tabs: My Reels / Liked Reels / Settings -->
-          <div class="profile-subtabs">
-            <button class="profile-tab-btn active" data-subtab="liked">
-              <i data-lucide="heart"></i> فيديوهات أعجبتني (خاصة بك)
-            </button>
-            <button class="profile-tab-btn" data-subtab="myreels">
-              <i data-lucide="video"></i> فيديوهاتي المنشورة
-            </button>
-            <button class="profile-tab-btn" data-subtab="settings">
-              <i data-lucide="settings"></i> تعديل بياناتي
-            </button>
-          </div>
-
-          <!-- SUBTAB CONTENT: LIKED REELS -->
-          <div id="subtabLikedContent" class="subtab-content active">
-            <div class="reels-grid" id="likedReelsGrid">
-              <!-- Dynamically populated liked reels -->
-            </div>
-          </div>
-
-          <!-- SUBTAB CONTENT: MY REELS -->
-          <div id="subtabMyReelsContent" class="subtab-content">
-            <div class="reels-grid" id="myReelsGrid">
-              <!-- Dynamically populated my reels -->
-            </div>
-          </div>
-
-          <!-- SUBTAB CONTENT: EDIT PROFILE -->
-          <div id="subtabSettingsContent" class="subtab-content">
-            <div class="edit-profile-form">
-              <div class="input-group">
-                <label>تعديل الاسم واللقب:</label>
-                <div class="input-field">
-                  <i data-lucide="edit-3"></i>
-                  <input type="text" id="editProfileNameInput" placeholder="الاسم الجديد...">
-                </div>
-              </div>
-
-              <div class="input-group">
-                <label>تعديل النبذة التعريفية (Bio):</label>
-                <div class="input-field">
-                  <i data-lucide="feather"></i>
-                  <input type="text" id="editProfileBioInput" placeholder="نبذة عنك...">
-                </div>
-              </div>
-
-              <div class="input-group">
-                <label>لغة التطبيق المفضلة:</label>
-                <div class="input-field">
-                  <i data-lucide="globe"></i>
-                  <select id="editProfileLangSelect" class="clean-select">
-                    <option value="ar">العربية (Arabic - RTL)</option>
-                    <option value="en">English (English - LTR)</option>
-                  </select>
-                </div>
-              </div>
-
-              <button id="saveProfileSettingsBtn" class="btn btn-primary">
-                <i data-lucide="save"></i> <span>حفظ التعديلات</span>
+                <i data-lucide="copy"></i> <span>نسخ</span>
               </button>
             </div>
           </div>
+
+          <!-- Profile Action Buttons -->
+          <div class="profile-actions-bar">
+            <button id="openEditProfileModalBtn" class="btn btn-secondary flex-1">تعديل الملف الشخصي</button>
+            <button id="logoutProfileBtn" class="btn btn-secondary">
+              <i data-lucide="log-out"></i>
+            </button>
+          </div>
+
+          <!-- Profile Grid Tabs (Posts, Reels, Liked/Saved) -->
+          <div class="profile-grid-tabs">
+            <button class="grid-tab-btn active" data-subtab="posts">
+              <i data-lucide="grid"></i> <span>المنشورات</span>
+            </button>
+            <button class="grid-tab-btn" data-subtab="myreels">
+              <i data-lucide="play-square"></i> <span>الريلز</span>
+            </button>
+            <button class="grid-tab-btn" data-subtab="liked">
+              <i data-lucide="heart"></i> <span>المحفوظات والإعجابات</span>
+            </button>
+          </div>
+
+          <!-- Profile Grids Content -->
+          <div id="profileGridContent" class="profile-media-grid"></div>
 
         </div>
       </section>
 
-    </div>
+    </main>
+
+    <!-- BOTTOM INSTAGRAM NAVIGATION BAR -->
+    <nav class="insta-bottom-nav">
+      <button class="bnav-btn active" data-view="home" title="الرئيسية">
+        <i data-lucide="home"></i>
+      </button>
+      <button class="bnav-btn" data-view="explore" title="استكشاف">
+        <i data-lucide="search"></i>
+      </button>
+      <button class="bnav-btn bnav-create" data-view="create" title="نشر جديد">
+        <i data-lucide="plus-circle"></i>
+      </button>
+      <button class="bnav-btn" data-view="reels" title="الريلز">
+        <i data-lucide="play-square"></i>
+      </button>
+      <button class="bnav-btn" data-view="direct" title="الرسائل الخاصة">
+        <i data-lucide="send"></i>
+      </button>
+      <button class="bnav-btn bnav-profile" data-view="profile" title="الملف الشخصي">
+        <img id="bnavAvatar" src="/avatars/avatar-1.svg" alt="Profile" class="bnav-avatar-img">
+      </button>
+    </nav>
+
   </div>
 
-  <!-- ================= MODAL: CREATE NEW REEL ================= -->
-  <div id="createReelModal" class="modal-overlay">
+  <!-- ================= EDIT PROFILE MODAL ================= -->
+  <div id="editProfileModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="app-badge"><i data-lucide="video"></i></div>
-        <h3>نشر ريلز جديد (Create Reel)</h3>
-        <p>شارك مقطع فيديو قصير مع أصدقائك والجميع</p>
+        <h3>تعديل الملف الشخصي</h3>
+        <p>قم بتحديث بياناتك على ONYX CHAT</p>
       </div>
-
       <div class="input-group">
-        <label>اختر مقطع الفيديو من جهازك:</label>
-        <div class="upload-video-zone" id="videoDropZone">
-          <i data-lucide="upload-cloud"></i>
-          <span id="selectedVideoName">اضغط هنا لاختيار فيديو (MP4 / WebM)</span>
-          <input type="file" id="reelVideoFile" accept="video/*" style="display: none;">
-        </div>
-      </div>
-
-      <div class="input-group">
-        <label>وصف الفيديو أو العنوان:</label>
+        <label>الاسم واللقب:</label>
         <div class="input-field">
-          <i data-lucide="message-square"></i>
-          <input type="text" id="reelCaptionInput" placeholder="اكتب وصفاً أو هاشتاق للفيديو...">
+          <i data-lucide="user"></i>
+          <input type="text" id="editNameInput" placeholder="الاسم...">
         </div>
       </div>
-
+      <div class="input-group">
+        <label>النبذة التعريفية (Bio):</label>
+        <div class="input-field">
+          <i data-lucide="feather"></i>
+          <input type="text" id="editBioInput" placeholder="اكتب نبذة عنك...">
+        </div>
+      </div>
+      <div class="input-group">
+        <label>لغة التطبيق:</label>
+        <div class="input-field">
+          <i data-lucide="globe"></i>
+          <select id="editLangSelect" class="clean-select">
+            <option value="ar">العربية (Arabic - RTL)</option>
+            <option value="en">English (English - LTR)</option>
+          </select>
+        </div>
+      </div>
       <div class="modal-actions">
-        <button id="cancelCreateReelBtn" class="btn btn-secondary">إلغاء</button>
-        <button id="publishReelBtn" class="btn btn-primary">
-          <i data-lucide="send"></i> <span>نشر الفيديو</span>
-        </button>
+        <button id="cancelEditProfileBtn" class="btn btn-secondary">إلغاء</button>
+        <button id="saveEditProfileBtn" class="btn btn-primary">حفظ التعديلات</button>
       </div>
     </div>
   </div>
 
-  <!-- ================= MODAL: REEL COMMENTS DRAWER ================= -->
-  <div id="reelCommentsModal" class="modal-overlay">
+  <!-- ================= POST / REEL COMMENTS MODAL ================= -->
+  <div id="commentsModal" class="modal-overlay">
     <div class="modal-card modal-small">
       <div class="modal-header">
         <h3>التعليقات</h3>
         <button class="btn-icon" id="closeCommentsBtn"><i data-lucide="x"></i></button>
       </div>
-      <div class="comments-list" id="reelCommentsList"></div>
+      <div class="comments-list" id="commentsList"></div>
       <div class="comment-input-bar">
-        <input type="text" id="newCommentInput" placeholder="اكتب تعليقاً...">
-        <button id="sendCommentBtn" class="btn-icon btn-send"><i data-lucide="send"></i></button>
+        <input type="text" id="commentTextInput" placeholder="اكتب تعليقاً...">
+        <button id="submitCommentBtn" class="btn-icon btn-send"><i data-lucide="send"></i></button>
       </div>
     </div>
   </div>
 
-  <!-- ================= MODAL: SHARE REEL TO CHAT ================= -->
-  <div id="shareReelModal" class="modal-overlay">
-    <div class="modal-card modal-small">
-      <div class="modal-header">
-        <h3>مشاركة الفيديو في المحادثات</h3>
-        <p>اختر الصديق الذي ترغب بإرسال هذا الريلز إليه</p>
-      </div>
-      <div class="share-friends-list" id="shareFriendsList"></div>
-      <div class="modal-actions">
-        <button id="closeShareReelBtn" class="btn btn-secondary">إلغاء</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= MODAL: AUDIO & VIDEO CALL ================= -->
+  <!-- ================= AUDIO & VIDEO CALL MODAL ================= -->
   <div id="callModal" class="modal-overlay call-overlay">
     <div class="call-card">
       <div class="call-header">
@@ -556,7 +583,6 @@
         <span id="callStatusText" class="call-status">جاري الاتصال...</span>
       </div>
 
-      <!-- Real Video Stream Display -->
       <div class="call-video-viewport" id="callVideoViewport" style="display: none;">
         <video id="localVideo" autoplay muted playsinline class="local-video"></video>
         <div class="remote-video-sim">
@@ -569,7 +595,7 @@
         <button id="toggleMicBtn" class="btn-call-ctrl" title="كتم/تشغيل الميكروفون">
           <i data-lucide="mic"></i>
         </button>
-        <button id="toggleCameraBtn" class="btn-call-ctrl" title="تشغيل/إيقاف الكاميرا">
+        <button id="toggleCameraBtn" class="btn-call-ctrl" title="الكاميرا">
           <i data-lucide="video"></i>
         </button>
         <button id="endCallBtn" class="btn-call-ctrl btn-hangup" title="إنهاء المكالمة">
@@ -579,46 +605,20 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: INCOMING CALL ================= -->
+  <!-- ================= INCOMING CALL MODAL ================= -->
   <div id="incomingCallModal" class="modal-overlay">
     <div class="modal-card modal-small text-center">
       <img id="incomingCallerAvatar" src="/avatars/avatar-1.svg" class="call-avatar pulse" alt="Caller">
       <h3 id="incomingCallerName">اسم المتصل</h3>
       <p id="incomingCallType">مكالمة واردة...</p>
       <div class="modal-actions justify-center" style="gap: 20px; margin-top: 20px;">
-        <button id="declineCallBtn" class="btn-round btn-cancel" title="رفض">
-          <i data-lucide="phone-off"></i>
-        </button>
-        <button id="acceptCallBtn" class="btn-round btn-success" title="قبول">
-          <i data-lucide="phone"></i>
-        </button>
+        <button id="declineCallBtn" class="btn-round btn-cancel" title="رفض"><i data-lucide="phone-off"></i></button>
+        <button id="acceptCallBtn" class="btn-round btn-success" title="قبول"><i data-lucide="phone"></i></button>
       </div>
     </div>
   </div>
 
-  <!-- ================= MODAL: ADD FRIEND ================= -->
-  <div id="addContactModal" class="modal-overlay">
-    <div class="modal-card modal-small">
-      <div class="modal-header">
-        <div class="app-badge"><i data-lucide="user-plus"></i></div>
-        <h3>إضافة صديق جديد</h3>
-        <p>أدخل رمز المعرف (User ID) أو اسم المستخدم</p>
-      </div>
-      <div class="input-group">
-        <div class="input-field">
-          <i data-lucide="search"></i>
-          <input type="text" id="newContactInput" placeholder="مثال: ID-48291 أو ahmed...">
-        </div>
-      </div>
-      <div id="contactError" class="error-msg"></div>
-      <div class="modal-actions">
-        <button id="cancelAddContactBtn" class="btn btn-secondary">إلغاء</button>
-        <button id="confirmAddContactBtn" class="btn btn-primary">بحث وإضافة</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= MODAL: VIEW CONTACT PROFILE ================= -->
+  <!-- ================= CONTACT PROFILE MODAL ================= -->
   <div id="contactProfileModal" class="modal-overlay">
     <div class="modal-card modal-small">
       <div class="modal-header">
@@ -640,7 +640,7 @@
           <strong id="viewContactUserId">---</strong>
         </div>
         <div class="profile-detail-row">
-          <span>المتابعون (Followers):</span>
+          <span>المتابعون:</span>
           <strong id="viewContactFollowers">0</strong>
         </div>
       </div>
@@ -657,7 +657,29 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: CHAT SETTINGS & THEMES ================= -->
+  <!-- ================= ADD FRIEND MODAL ================= -->
+  <div id="addContactModal" class="modal-overlay">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <div class="app-badge"><i data-lucide="user-plus"></i></div>
+        <h3>إضافة صديق جديد</h3>
+        <p>أدخل رمز المعرف (User ID) أو اسم المستخدم</p>
+      </div>
+      <div class="input-group">
+        <div class="input-field">
+          <i data-lucide="search"></i>
+          <input type="text" id="newContactInput" placeholder="مثال: ID-48291 أو ahmed...">
+        </div>
+      </div>
+      <div id="contactError" class="error-msg"></div>
+      <div class="modal-actions">
+        <button id="cancelAddContactBtn" class="btn btn-secondary">إلغاء</button>
+        <button id="confirmAddContactBtn" class="btn btn-primary">بحث وإضافة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CHAT SETTINGS MODAL ================= -->
   <div id="chatSettingsModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -665,7 +687,6 @@
         <h3>إعدادات المظهر والثيمات</h3>
         <p>اختر الستيل المفضل لك وخلفية المحادثات</p>
       </div>
-
       <div class="settings-section">
         <label class="settings-title">ثيمات ONYX الفاخرة:</label>
         <div class="themes-grid">
@@ -691,33 +712,28 @@
           </button>
         </div>
       </div>
-
       <div class="settings-section">
         <label class="settings-title">خلفية المحادثة (Chat Wallpaper):</label>
         <div class="wallpaper-actions">
           <label for="wallpaperUploadInput" class="btn btn-secondary btn-block">
-            <i data-lucide="image"></i>
-            <span>رفع صورة كخلفية</span>
+            <i data-lucide="image"></i> <span>رفع صورة كخلفية</span>
           </label>
           <input type="file" id="wallpaperUploadInput" accept="image/*" style="display: none;">
           <button id="resetWallpaperBtn" class="btn btn-secondary">إعادة ضبط</button>
         </div>
       </div>
-
       <div class="settings-section danger-zone">
         <button id="deleteChatBtn" class="btn btn-danger btn-block">
-          <i data-lucide="trash-2"></i>
-          <span>حذف جميع رسائل هذه المحادثة</span>
+          <i data-lucide="trash-2"></i> <span>حذف جميع رسائل هذه المحادثة</span>
         </button>
       </div>
-
       <div class="modal-actions" style="margin-top: 20px;">
         <button id="closeChatSettingsBtn" class="btn btn-primary btn-block">حفظ الإعدادات</button>
       </div>
     </div>
   </div>
 
-  <!-- ================= LIGHTBOX FOR IMAGES ================= -->
+  <!-- ================= LIGHTBOX ================= -->
   <div id="lightbox" class="lightbox">
     <button class="lightbox-close" id="closeLightbox"><i data-lucide="x"></i></button>
     <img id="lightboxImg" src="" alt="عرض الصورة">

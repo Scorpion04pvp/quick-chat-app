@@ -5,13 +5,14 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const cors = require('cors');
+const nodemailer = require('nodemailer');
 const db = require('./db');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' },
-  maxHttpBufferSize: 1e8 // 100MB for video reels and audio
+  maxHttpBufferSize: 1e8 // 100MB
 });
 
 const PORT = process.env.PORT || 3000;
@@ -21,7 +22,7 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-// Multer storage for images, audio, and video reels
+// Multer storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOADS_DIR),
   filename: (req, file, cb) => {
@@ -35,10 +36,9 @@ const storage = multer.diskStorage({
     cb(null, safeName);
   }
 });
-
 const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 } // 100 MB max for video reels
+  limits: { fileSize: 100 * 1024 * 1024 }
 });
 
 app.use(cors());
@@ -47,35 +47,77 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Online users tracking: username.toLowerCase() -> Set(socket.id)
+// Online users tracking
 const onlineUsers = new Map();
 
+// Helper: Send Real Email via Gmail SMTP
+async function sendRealVerificationEmail(toEmail, code) {
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+
+  if (!smtpUser || !smtpPass) {
+    console.log(`[SMTP Notice] SMTP_USER/SMTP_PASS not set in environment. Code for ${toEmail}: ${code}`);
+    return { sent: false, note: 'SMTP_USER_NOT_SET' };
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: smtpUser, pass: smtpPass }
+    });
+
+    await transporter.sendMail({
+      from: `"ONYX CHAT" <${smtpUser}>`,
+      to: toEmail,
+      subject: `ONYX CHAT - رمز التحقق الخاص بك: ${code}`,
+      html: `
+        <div style="font-family: Cairo, Arial, sans-serif; direction: rtl; text-align: right; background: #090511; color: white; padding: 30px; border-radius: 16px; border: 1px solid #a855f7;">
+          <h2 style="color: #a855f7; margin-bottom: 8px;">مرحباً بك في ONYX CHAT 🔮</h2>
+          <p style="color: #cbd5e1; font-size: 16px;">شكراً لانضمامك. رمز التحقق لتأكيد حسابك هو:</p>
+          <div style="background: #190e32; padding: 16px; border-radius: 12px; text-align: center; margin: 20px 0; border: 1px dashed #a855f7;">
+            <span style="color: #38bdf8; letter-spacing: 8px; font-size: 36px; font-weight: bold; font-family: monospace;">${code}</span>
+          </div>
+          <p style="color: #94a3b8; font-size: 14px;">صلاحية هذا الرمز هي 15 دقيقة. يرجى عدم مشاركته مع أي شخص.</p>
+        </div>
+      `
+    });
+    return { sent: true };
+  } catch (err) {
+    console.error('Nodemailer Error:', err.message);
+    return { sent: false, error: err.message };
+  }
+}
+
 // -------------------------------------------------------------
-// AUTHENTICATION & VERIFICATION API
+// AUTHENTICATION API
 // -------------------------------------------------------------
 
-// Step 1: Send verification code to Gmail or Phone
-app.post('/api/auth/send-code', (req, res) => {
+// Step 1: Send Verification Code
+app.post('/api/auth/send-code', async (req, res) => {
   const { emailOrPhone } = req.body;
   if (!emailOrPhone || !emailOrPhone.trim()) {
     return res.status(400).json({ error: 'يرجى إدخال البريد الإلكتروني أو رقم الهاتف' });
   }
 
   const code = db.generateVerificationCode(emailOrPhone);
-  // Realistic instant delivery simulation:
   const isEmail = emailOrPhone.includes('@');
-  const simulatedMsg = isEmail
-    ? `تم إرسال كود التحقق إلى بريدك الإلكتروني (${emailOrPhone}): ${code}`
-    : `تم إرسال كود التحقق في رسالة نصية SMS إلى رقمك (${emailOrPhone}): ${code}`;
+  let realEmailResult = { sent: false };
+
+  if (isEmail) {
+    realEmailResult = await sendRealVerificationEmail(emailOrPhone, code);
+  }
 
   return res.json({
     success: true,
-    code, // Return code so frontend can display realistic alert / auto-fill helper
-    message: simulatedMsg
+    code, // Returned to client so user can also use in-app toast preview without failure
+    emailSent: realEmailResult.sent,
+    message: realEmailResult.sent
+      ? `تم إرسال كود التحقق الفعلي إلى بريدك الإلكتروني (${emailOrPhone})`
+      : `تم إنشاء كود التحقق لحسابك: ${code}`
   });
 });
 
-// Step 2: Verify code and Register
+// Step 2: Verify Code and Register
 app.post('/api/auth/verify-and-register', (req, res) => {
   const { emailOrPhone, code, username, password, displayName, avatarUrl, bio } = req.body;
 
@@ -97,9 +139,17 @@ app.post('/api/auth/verify-and-register', (req, res) => {
     bio
   });
 
-  if (!result.success) {
-    return res.status(400).json({ error: result.error });
-  }
+  if (!result.success) return res.status(400).json({ error: result.error });
+  return res.json({ success: true, user: result.user });
+});
+
+// Google One-Click Auth
+app.post('/api/auth/google', (req, res) => {
+  const { email, name, avatarUrl } = req.body;
+  if (!email) return res.status(400).json({ error: 'البريد الإلكتروني مطلوب' });
+
+  const result = db.googleLogin({ email, name, avatarUrl });
+  if (!result.success) return res.status(400).json({ error: result.error });
 
   return res.json({ success: true, user: result.user });
 });
@@ -108,9 +158,7 @@ app.post('/api/auth/verify-and-register', (req, res) => {
 app.post('/api/auth/login', (req, res) => {
   const { usernameOrContact, password } = req.body;
   const result = db.loginUser({ usernameOrContact, password });
-  if (!result.success) {
-    return res.status(400).json({ error: result.error });
-  }
+  if (!result.success) return res.status(400).json({ error: result.error });
   return res.json({ success: true, user: result.user });
 });
 
@@ -120,9 +168,7 @@ app.post('/api/profile/update', (req, res) => {
   if (!username) return res.status(400).json({ error: 'اسم المستخدم مطلوب' });
 
   const result = db.updateUserProfile(username, { displayName, avatarUrl, bio, language, theme, chatWallpaper });
-  if (!result.success) {
-    return res.status(400).json({ error: result.error });
-  }
+  if (!result.success) return res.status(400).json({ error: result.error });
   return res.json({ success: true, user: result.user });
 });
 
@@ -137,22 +183,26 @@ app.get('/api/user-profile', (req, res) => {
   const isOnline = onlineUsers.has(user.username.toLowerCase()) && onlineUsers.get(user.username.toLowerCase()).size > 0;
   const isFollowing = current && user.followers ? user.followers.includes(current) : false;
 
+  const allPosts = db.getAllPosts().filter(p => p.creator.toLowerCase() === user.username.toLowerCase());
+  const allReels = db.getAllReels().filter(r => r.creator.toLowerCase() === user.username.toLowerCase());
+
   return res.json({
     user: {
       ...user,
       online: isOnline,
       isFollowing,
       followersCount: user.followers ? user.followers.length : 0,
-      followingCount: user.following ? user.following.length : 0
+      followingCount: user.following ? user.following.length : 0,
+      postsCount: allPosts.length,
+      reelsCount: allReels.length
     }
   });
 });
 
-// Follow / Unfollow User
+// Follow / Unfollow
 app.post('/api/follow/toggle', (req, res) => {
   const { currentUsername, targetUsername } = req.body;
   if (!currentUsername || !targetUsername) return res.status(400).json({ error: 'بيانات غير مكتملة' });
-
   const result = db.toggleFollow(currentUsername, targetUsername);
   return res.json(result);
 });
@@ -170,7 +220,114 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 });
 
 // -------------------------------------------------------------
-// CONTACTS & MESSAGES API
+// INSTAGRAM FEED & STORIES API
+// -------------------------------------------------------------
+
+app.get('/api/posts', (req, res) => {
+  const posts = db.getAllPosts();
+  return res.json({ posts });
+});
+
+app.post('/api/posts', (req, res) => {
+  const { creator, mediaUrl, type, caption } = req.body;
+  if (!creator || !mediaUrl) return res.status(400).json({ error: 'بيانات المنشور غير مكتملة' });
+
+  const post = db.createPost({ creator, mediaUrl, type, caption });
+  const all = db.getAllPosts();
+  const created = all.find(p => p.id === post.id);
+
+  io.emit('new_post', created);
+  return res.json({ success: true, post: created });
+});
+
+app.post('/api/posts/:id/like', (req, res) => {
+  const { username } = req.body;
+  const result = db.toggleLikePost(req.params.id, username);
+  if (result.success) {
+    io.emit('post_liked', { postId: req.params.id, likesCount: result.likesCount });
+  }
+  return res.json(result);
+});
+
+app.post('/api/posts/:id/comment', (req, res) => {
+  const { username, text } = req.body;
+  const result = db.addPostComment(req.params.id, { username, text });
+  if (result.success) {
+    io.emit('post_new_comment', { postId: req.params.id, comment: result.comment });
+  }
+  return res.json(result);
+});
+
+app.get('/api/stories', (req, res) => {
+  const stories = db.getActiveStories();
+  return res.json({ stories });
+});
+
+app.post('/api/stories', (req, res) => {
+  const { creator, mediaUrl } = req.body;
+  if (!creator || !mediaUrl) return res.status(400).json({ error: 'البيانات غير مكتملة' });
+
+  const story = db.createStory({ creator, mediaUrl });
+  io.emit('new_story', story);
+  return res.json({ success: true, story });
+});
+
+// -------------------------------------------------------------
+// REELS API
+// -------------------------------------------------------------
+
+app.get('/api/reels', (req, res) => {
+  const reels = db.getAllReels();
+  return res.json({ reels });
+});
+
+app.post('/api/reels', (req, res) => {
+  const { creator, videoUrl, caption } = req.body;
+  if (!creator || !videoUrl) return res.status(400).json({ error: 'بيانات غير مكتملة' });
+
+  const reel = db.createReel({ creator, videoUrl, caption });
+  const all = db.getAllReels();
+  const created = all.find(r => r.id === reel.id);
+
+  io.emit('new_reel', created);
+  return res.json({ success: true, reel: created });
+});
+
+app.delete('/api/reels/:id', (req, res) => {
+  const { username } = req.query;
+  const result = db.deleteReel(req.params.id, username);
+  if (!result.success) return res.status(400).json({ error: result.error });
+
+  io.emit('reel_deleted', { reelId: req.params.id });
+  return res.json({ success: true });
+});
+
+app.post('/api/reels/:id/like', (req, res) => {
+  const { username } = req.body;
+  const result = db.toggleLikeReel(req.params.id, username);
+  if (result.success) {
+    io.emit('reel_liked', { reelId: req.params.id, likesCount: result.likesCount });
+  }
+  return res.json(result);
+});
+
+app.post('/api/reels/:id/comment', (req, res) => {
+  const { username, text } = req.body;
+  const result = db.addReelComment(req.params.id, { username, text });
+  if (result.success) {
+    io.emit('reel_new_comment', { reelId: req.params.id, comment: result.comment });
+  }
+  return res.json(result);
+});
+
+app.get('/api/reels/liked', (req, res) => {
+  const { username } = req.query;
+  const liked = db.getUserLikedReels(username);
+  return res.json({ reels: liked });
+});
+
+// -------------------------------------------------------------
+// MESSAGES & CONTACTS API
 // -------------------------------------------------------------
 
 app.get('/api/contacts', (req, res) => {
@@ -207,9 +364,7 @@ app.post('/api/contacts', (req, res) => {
   if (!username || !identifier) return res.status(400).json({ error: 'البيانات غير مكتملة' });
 
   const targetUser = db.getUserByUsernameOrId(identifier);
-  if (!targetUser) {
-    return res.status(404).json({ error: 'لم يتم العثور على مستخدم بهذا المعرف (User ID) أو الاسم' });
-  }
+  if (!targetUser) return res.status(404).json({ error: 'لم يتم العثور على مستخدم بهذا المعرف أو الاسم' });
 
   const result = db.addContact(username, targetUser.username);
   if (!result.success) return res.status(400).json({ error: result.message });
@@ -227,17 +382,12 @@ app.post('/api/contacts', (req, res) => {
 
 app.post('/api/contacts/remove', (req, res) => {
   const { username, targetUsername } = req.body;
-  if (!username || !targetUsername) return res.status(400).json({ error: 'البيانات غير مكتملة' });
-
   db.removeContact(username, targetUsername);
   return res.json({ success: true });
 });
 
-// Delete Single Message
 app.post('/api/messages/delete-one', (req, res) => {
   const { messageId, username } = req.body;
-  if (!messageId || !username) return res.status(400).json({ error: 'البيانات غير مكتملة' });
-
   const result = db.deleteSingleMessage(messageId, username);
   if (!result.success) return res.status(400).json({ error: result.error });
 
@@ -251,15 +401,11 @@ app.post('/api/messages/delete-one', (req, res) => {
     io.to('user:' + sKey).emit('message_deleted', { messageId });
     io.to('user:' + rKey).emit('message_deleted', { messageId });
   }
-
   return res.json({ success: true });
 });
 
-// Delete entire conversation
 app.post('/api/conversation/delete', (req, res) => {
   const { user1, user2 } = req.body;
-  if (!user1 || !user2) return res.status(400).json({ error: 'بيانات غير مكتملة' });
-
   db.deleteConversation(user1, user2);
 
   const u1Key = user1.toLowerCase();
@@ -270,88 +416,17 @@ app.post('/api/conversation/delete', (req, res) => {
     io.to('user:' + u1Key).emit('conversation_deleted', { withUser: user2 });
     io.to('user:' + u2Key).emit('conversation_deleted', { withUser: user1 });
   }
-
   return res.json({ success: true });
 });
 
-// Get messages history
 app.get('/api/messages', (req, res) => {
   const { user1, user2 } = req.query;
-  if (!user1 || !user2) return res.status(400).json({ error: 'المستخدمان مطلوبان' });
-
   const messages = db.getConversation(user1, user2);
   return res.json({ messages });
 });
 
 // -------------------------------------------------------------
-// REELS (SHORT VIDEOS) API
-// -------------------------------------------------------------
-
-app.get('/api/reels', (req, res) => {
-  const reels = db.getAllReels();
-  return res.json({ reels });
-});
-
-app.post('/api/reels', (req, res) => {
-  const { creator, videoUrl, caption } = req.body;
-  if (!creator || !videoUrl) return res.status(400).json({ error: 'بيانات الفيديو غير مكتملة' });
-
-  const reel = db.createReel({ creator, videoUrl, caption });
-  const allReels = db.getAllReels();
-  const created = allReels.find(r => r.id === reel.id);
-
-  // Real-time broadcast new reel to everyone
-  io.emit('new_reel', created);
-
-  return res.json({ success: true, reel: created });
-});
-
-app.delete('/api/reels/:id', (req, res) => {
-  const { username } = req.query;
-  const reelId = req.params.id;
-  if (!username) return res.status(400).json({ error: 'اسم المستخدم مطلوب' });
-
-  const result = db.deleteReel(reelId, username);
-  if (!result.success) return res.status(400).json({ error: result.error });
-
-  io.emit('reel_deleted', { reelId });
-  return res.json({ success: true });
-});
-
-app.post('/api/reels/:id/like', (req, res) => {
-  const { username } = req.body;
-  const reelId = req.params.id;
-  if (!username) return res.status(400).json({ error: 'اسم المستخدم مطلوب' });
-
-  const result = db.toggleLikeReel(reelId, username);
-  if (result.success) {
-    io.emit('reel_liked', { reelId, likesCount: result.likesCount });
-  }
-  return res.json(result);
-});
-
-app.post('/api/reels/:id/comment', (req, res) => {
-  const { username, text } = req.body;
-  const reelId = req.params.id;
-  if (!username || !text) return res.status(400).json({ error: 'نص التعليق مطلوب' });
-
-  const result = db.addReelComment(reelId, { username, text });
-  if (result.success) {
-    io.emit('reel_new_comment', { reelId, comment: result.comment });
-  }
-  return res.json(result);
-});
-
-app.get('/api/reels/liked', (req, res) => {
-  const { username } = req.query;
-  if (!username) return res.status(400).json({ error: 'اسم المستخدم مطلوب' });
-
-  const liked = db.getUserLikedReels(username);
-  return res.json({ reels: liked });
-});
-
-// -------------------------------------------------------------
-// SOCKET.IO REALTIME EVENTS (CALLS, MESSAGES, REELS)
+// REALTIME SOCKET.IO
 // -------------------------------------------------------------
 
 io.on('connection', (socket) => {
@@ -377,7 +452,6 @@ io.on('connection', (socket) => {
 
   socket.on('send_message', (msgData) => {
     if (!authenticatedUser || !msgData) return;
-
     const { recipient, type, content, mediaUrl, duration } = msgData;
     if (!recipient) return;
 
@@ -411,11 +485,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Call Signaling (Audio & Video Calls)
+  // Call Signaling
   socket.on('call_start', ({ recipient, isVideo, callerData }) => {
     if (!authenticatedUser || !recipient) return;
-    const rKey = recipient.toLowerCase();
-    io.to('user:' + rKey).emit('incoming_call', {
+    io.to('user:' + recipient.toLowerCase()).emit('incoming_call', {
       caller: authenticatedUser,
       callerData,
       isVideo
@@ -424,8 +497,7 @@ io.on('connection', (socket) => {
 
   socket.on('call_answer', ({ caller, accepted }) => {
     if (!authenticatedUser || !caller) return;
-    const cKey = caller.toLowerCase();
-    io.to('user:' + cKey).emit('call_response', {
+    io.to('user:' + caller.toLowerCase()).emit('call_response', {
       from: authenticatedUser,
       accepted
     });

@@ -10,10 +10,12 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 let data = {
-  users: {},      // username.toLowerCase() -> user object
-  contacts: {},   // username.toLowerCase() -> [contactUsername, ...]
-  messages: [],   // [ message objects ]
-  reels: [],      // [ { id, creator, videoUrl, caption, likes: [], comments: [], timestamp } ]
+  users: {},            // username.toLowerCase() -> user object
+  contacts: {},         // username.toLowerCase() -> [contactUsername, ...]
+  messages: [],         // [ message objects ]
+  posts: [],            // [ { id, creator, mediaUrl, type, caption, likes: [], comments: [], timestamp } ]
+  reels: [],            // [ { id, creator, videoUrl, caption, likes: [], comments: [], timestamp } ]
+  stories: [],          // [ { id, creator, mediaUrl, timestamp, expiresAt } ]
   verificationCodes: {} // emailOrPhone -> { code, expiresAt }
 };
 
@@ -21,14 +23,16 @@ if (fs.existsSync(DB_FILE)) {
   try {
     const fileContent = fs.readFileSync(DB_FILE, 'utf-8');
     data = Object.assign(data, JSON.parse(fileContent));
+    if (!data.posts) data.posts = [];
     if (!data.reels) data.reels = [];
+    if (!data.stories) data.stories = [];
     if (!data.verificationCodes) data.verificationCodes = {};
   } catch (err) {
     console.error('Error reading db.json:', err);
   }
 }
 
-// Migrate existing users to ensure all new fields exist
+// Migrate users
 Object.keys(data.users).forEach(k => {
   const u = data.users[k];
   if (!u.userId) u.userId = 'ID-' + Math.floor(10000 + Math.random() * 90000);
@@ -38,7 +42,9 @@ Object.keys(data.users).forEach(k => {
   if (!u.bio) u.bio = 'مرحباً، أنا أستخدم Onyx Chat!';
   if (!u.followers) u.followers = [];
   if (!u.following) u.following = [];
+  if (!u.likedPosts) u.likedPosts = [];
   if (!u.likedReels) u.likedReels = [];
+  if (!u.savedPosts) u.savedPosts = [];
 });
 
 let saveTimeout = null;
@@ -54,7 +60,7 @@ function save() {
 }
 
 function hashPassword(password) {
-  return crypto.createHash('sha256').update(password + '_onyx_chat_salt_2026').digest('hex');
+  return crypto.createHash('sha256').update(password + '_onyx_instagram_salt_2026').digest('hex');
 }
 
 function generateUniqueUserId() {
@@ -101,14 +107,13 @@ module.exports = {
     return Object.values(data.users).map(sanitizeUser);
   },
 
-  // Verification Code Generation (for Gmail or Phone)
   generateVerificationCode(emailOrPhone) {
     if (!emailOrPhone) return null;
     const key = emailOrPhone.trim().toLowerCase();
-    const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
     data.verificationCodes[key] = {
       code,
-      expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
+      expiresAt: Date.now() + 15 * 60 * 1000 // 15 mins
     };
     save();
     return code;
@@ -123,18 +128,17 @@ module.exports = {
     return record.code.trim() === inputCode.trim();
   },
 
-  // Register with Gmail or Phone verification
   registerUser({ username, password, displayName, emailOrPhone, avatarUrl, bio }) {
     if (!username || !username.trim()) {
       return { success: false, error: 'اسم المستخدم مطلوب' };
     }
     if (!password || password.length < 4) {
-      return { success: false, error: 'كلمة المرور يجب أن تكون 4 أحرف أو أرقام على الأقل' };
+      return { success: false, error: 'كلمة المرور يجب أن تكون 4 رموز على الأقل' };
     }
 
     const key = username.toLowerCase().trim();
     if (data.users[key]) {
-      return { success: false, error: 'اسم المستخدم هذا مسجل مسبقاً، يرجى اختيار اسم آخر' };
+      return { success: false, error: 'اسم المستخدم هذا مسجل مسبقاً' };
     }
 
     const userId = generateUniqueUserId();
@@ -145,33 +149,80 @@ module.exports = {
       emailOrPhone: (emailOrPhone || '').trim(),
       passwordHash: hashPassword(password),
       avatarUrl: avatarUrl || '/avatars/avatar-1.svg',
-      bio: bio && bio.trim() ? bio.trim() : 'مرحباً، أنا أستخدم Onyx Chat!',
+      bio: bio && bio.trim() ? bio.trim() : '✨ مستخدم جديد على ONYX CHAT',
       theme: 'onyx-purple',
       language: 'ar',
       chatWallpaper: null,
       followers: [],
       following: [],
+      likedPosts: [],
       likedReels: [],
+      savedPosts: [],
       createdAt: Date.now(),
       lastSeen: Date.now()
     };
 
     data.users[key] = newUser;
     save();
-
     return { success: true, user: sanitizeUser(newUser) };
   },
 
-  // Login
+  // Google One-Click Registration / Login
+  googleLogin({ email, name, avatarUrl }) {
+    if (!email) return { success: false, error: 'البريد الإلكتروني مطلوب' };
+
+    const emailClean = email.toLowerCase().trim();
+    // Check if user already exists with this email
+    let existing = Object.values(data.users).find(u => (u.emailOrPhone || '').toLowerCase() === emailClean);
+
+    if (existing) {
+      existing.lastSeen = Date.now();
+      save();
+      return { success: true, user: sanitizeUser(existing) };
+    }
+
+    // Create new account automatically
+    const baseUsername = emailClean.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'user';
+    let uniqueUsername = baseUsername;
+    let counter = 1;
+    while (data.users[uniqueUsername]) {
+      uniqueUsername = `${baseUsername}${counter++}`;
+    }
+
+    const userId = generateUniqueUserId();
+    const newUser = {
+      userId,
+      username: uniqueUsername,
+      displayName: name || uniqueUsername,
+      emailOrPhone: emailClean,
+      passwordHash: hashPassword('google_oauth_pass_' + Math.random()),
+      avatarUrl: avatarUrl || '/avatars/avatar-1.svg',
+      bio: '✨ حساب موثق عبر Google في ONYX CHAT',
+      theme: 'onyx-purple',
+      language: 'ar',
+      chatWallpaper: null,
+      followers: [],
+      following: [],
+      likedPosts: [],
+      likedReels: [],
+      savedPosts: [],
+      createdAt: Date.now(),
+      lastSeen: Date.now()
+    };
+
+    data.users[uniqueUsername] = newUser;
+    save();
+    return { success: true, user: sanitizeUser(newUser) };
+  },
+
   loginUser({ usernameOrContact, password }) {
     if (!usernameOrContact || !password) {
-      return { success: false, error: 'يرجى إدخال اسم المستخدم/البريد/الهاتف وكلمة المرور' };
+      return { success: false, error: 'يرجى إدخال اسم المستخدم/البريد وكلمة المرور' };
     }
 
     const query = usernameOrContact.trim().toLowerCase();
     let user = data.users[query];
 
-    // Find by email or phone if not found by username
     if (!user) {
       user = Object.values(data.users).find(u =>
         (u.emailOrPhone && u.emailOrPhone.toLowerCase() === query) ||
@@ -180,7 +231,7 @@ module.exports = {
     }
 
     if (!user) {
-      return { success: false, error: 'الحساب غير موجود، يرجى إنشاء حساب جديد' };
+      return { success: false, error: 'الحساب غير موجود' };
     }
 
     if (user.passwordHash && user.passwordHash !== hashPassword(password)) {
@@ -189,11 +240,9 @@ module.exports = {
 
     user.lastSeen = Date.now();
     save();
-
     return { success: true, user: sanitizeUser(user) };
   },
 
-  // Profile Update
   updateUserProfile(username, { displayName, avatarUrl, bio, language, theme, chatWallpaper }) {
     const key = username.toLowerCase().trim();
     const user = data.users[key];
@@ -216,49 +265,6 @@ module.exports = {
       data.users[key].lastSeen = Date.now();
       save();
     }
-  },
-
-  // Contacts
-  getContacts(username) {
-    const key = username.toLowerCase().trim();
-    return data.contacts[key] || [];
-  },
-
-  addContact(username, contactUsername) {
-    const key = username.toLowerCase().trim();
-    const contactKey = contactUsername.toLowerCase().trim();
-
-    if (key === contactKey) {
-      return { success: false, message: 'لا يمكنك إضافة نفسك' };
-    }
-
-    if (!data.users[contactKey]) {
-      return { success: false, message: 'المستخدم غير موجود' };
-    }
-
-    if (!data.contacts[key]) data.contacts[key] = [];
-    if (!data.contacts[key].includes(contactKey)) data.contacts[key].push(contactKey);
-
-    if (!data.contacts[contactKey]) data.contacts[contactKey] = [];
-    if (!data.contacts[contactKey].includes(key)) data.contacts[contactKey].push(key);
-
-    save();
-    return { success: true, contact: sanitizeUser(data.users[contactKey]) };
-  },
-
-  removeContact(username, contactUsername) {
-    const key = username.toLowerCase().trim();
-    const contactKey = contactUsername.toLowerCase().trim();
-
-    if (data.contacts[key]) {
-      data.contacts[key] = data.contacts[key].filter(c => c !== contactKey);
-    }
-    if (data.contacts[contactKey]) {
-      data.contacts[contactKey] = data.contacts[contactKey].filter(c => c !== key);
-    }
-
-    save();
-    return { success: true };
   },
 
   // Follow / Unfollow
@@ -294,7 +300,245 @@ module.exports = {
     };
   },
 
-  // Messages
+  // ================= INSTAGRAM POSTS & STORIES =================
+  createPost({ creator, mediaUrl, type, caption }) {
+    const post = {
+      id: 'post_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      creator: creator.trim(),
+      mediaUrl,
+      type: type || 'image', // 'image' | 'video'
+      caption: caption || '',
+      likes: [],
+      comments: [],
+      timestamp: Date.now()
+    };
+    data.posts.unshift(post);
+    save();
+    return post;
+  },
+
+  getAllPosts() {
+    return data.posts.map(p => {
+      const u = data.users[p.creator.toLowerCase()];
+      return {
+        ...p,
+        creatorDisplayName: u ? (u.displayName || u.username) : p.creator,
+        creatorAvatar: u ? u.avatarUrl : '/avatars/avatar-1.svg',
+        creatorUserId: u ? u.userId : '---'
+      };
+    });
+  },
+
+  toggleLikePost(postId, username) {
+    const post = data.posts.find(p => p.id === postId);
+    const user = data.users[username.toLowerCase().trim()];
+    if (!post || !user) return { success: false, error: 'غير موجود' };
+
+    if (!post.likes) post.likes = [];
+    if (!user.likedPosts) user.likedPosts = [];
+
+    const alreadyLiked = post.likes.includes(username);
+    if (alreadyLiked) {
+      post.likes = post.likes.filter(u => u !== username);
+      user.likedPosts = user.likedPosts.filter(id => id !== postId);
+    } else {
+      post.likes.push(username);
+      if (!user.likedPosts.includes(postId)) user.likedPosts.push(postId);
+    }
+
+    save();
+    return { success: true, liked: !alreadyLiked, likesCount: post.likes.length };
+  },
+
+  addPostComment(postId, { username, text }) {
+    const post = data.posts.find(p => p.id === postId);
+    const user = data.users[username.toLowerCase().trim()];
+    if (!post || !user) return { success: false, error: 'غير موجود' };
+
+    const comment = {
+      id: 'cmt_' + Date.now(),
+      username: user.username,
+      displayName: user.displayName || user.username,
+      avatarUrl: user.avatarUrl,
+      text: text.trim(),
+      timestamp: Date.now()
+    };
+
+    if (!post.comments) post.comments = [];
+    post.comments.push(comment);
+    save();
+    return { success: true, comment };
+  },
+
+  createStory({ creator, mediaUrl }) {
+    const story = {
+      id: 'story_' + Date.now(),
+      creator: creator.trim(),
+      mediaUrl,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+    };
+    data.stories.unshift(story);
+    save();
+    return story;
+  },
+
+  getActiveStories() {
+    const now = Date.now();
+    data.stories = data.stories.filter(s => s.expiresAt > now);
+    return data.stories.map(s => {
+      const u = data.users[s.creator.toLowerCase()];
+      return {
+        ...s,
+        creatorDisplayName: u ? (u.displayName || u.username) : s.creator,
+        creatorAvatar: u ? u.avatarUrl : '/avatars/avatar-1.svg'
+      };
+    });
+  },
+
+  // ================= REELS (SHORT VIDEOS) =================
+  createReel({ creator, videoUrl, caption }) {
+    const reel = {
+      id: 'reel_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      creator: creator.trim(),
+      videoUrl,
+      caption: caption || '',
+      likes: [],
+      comments: [],
+      timestamp: Date.now()
+    };
+    data.reels.unshift(reel);
+    save();
+    return reel;
+  },
+
+  getAllReels() {
+    return data.reels.map(r => {
+      const u = data.users[r.creator.toLowerCase()];
+      return {
+        ...r,
+        creatorDisplayName: u ? (u.displayName || u.username) : r.creator,
+        creatorAvatar: u ? u.avatarUrl : '/avatars/avatar-1.svg',
+        creatorUserId: u ? u.userId : '---'
+      };
+    });
+  },
+
+  deleteReel(reelId, requesterUsername) {
+    const req = requesterUsername.toLowerCase().trim();
+    const index = data.reels.findIndex(r => r.id === reelId);
+    if (index === -1) return { success: false, error: 'الفيديو غير موجود' };
+
+    if (data.reels[index].creator.toLowerCase() !== req) {
+      return { success: false, error: 'لا يمكنك حذف سوى مقاطعك الخاصة' };
+    }
+
+    data.reels.splice(index, 1);
+    save();
+    return { success: true };
+  },
+
+  toggleLikeReel(reelId, username) {
+    const uKey = username.toLowerCase().trim();
+    const user = data.users[uKey];
+    const reel = data.reels.find(r => r.id === reelId);
+
+    if (!reel || !user) return { success: false, error: 'غير موجود' };
+
+    if (!reel.likes) reel.likes = [];
+    if (!user.likedReels) user.likedReels = [];
+
+    const alreadyLiked = reel.likes.includes(username);
+
+    if (alreadyLiked) {
+      reel.likes = reel.likes.filter(u => u !== username);
+      user.likedReels = user.likedReels.filter(id => id !== reelId);
+    } else {
+      reel.likes.push(username);
+      if (!user.likedReels.includes(reelId)) {
+        user.likedReels.push(reelId);
+      }
+    }
+
+    save();
+    return { success: true, liked: !alreadyLiked, likesCount: reel.likes.length };
+  },
+
+  addReelComment(reelId, { username, text }) {
+    const reel = data.reels.find(r => r.id === reelId);
+    const user = data.users[username.toLowerCase().trim()];
+    if (!reel || !user) return { success: false, error: 'غير موجود' };
+
+    const comment = {
+      id: 'cmt_' + Date.now(),
+      username: user.username,
+      displayName: user.displayName || user.username,
+      avatarUrl: user.avatarUrl,
+      text: text.trim(),
+      timestamp: Date.now()
+    };
+
+    if (!reel.comments) reel.comments = [];
+    reel.comments.push(comment);
+    save();
+    return { success: true, comment };
+  },
+
+  getUserLikedReels(username) {
+    const uKey = username.toLowerCase().trim();
+    const user = data.users[uKey];
+    if (!user || !user.likedReels) return [];
+
+    return data.reels
+      .filter(r => user.likedReels.includes(r.id))
+      .map(r => {
+        const u = data.users[r.creator.toLowerCase()];
+        return {
+          ...r,
+          creatorDisplayName: u ? (u.displayName || u.username) : r.creator,
+          creatorAvatar: u ? u.avatarUrl : '/avatars/avatar-1.svg'
+        };
+      });
+  },
+
+  // ================= MESSAGES & DIRECT =================
+  getContacts(username) {
+    const key = username.toLowerCase().trim();
+    return data.contacts[key] || [];
+  },
+
+  addContact(username, contactUsername) {
+    const key = username.toLowerCase().trim();
+    const contactKey = contactUsername.toLowerCase().trim();
+
+    if (key === contactKey) return { success: false, message: 'لا يمكنك إضافة نفسك' };
+    if (!data.users[contactKey]) return { success: false, message: 'المستخدم غير موجود' };
+
+    if (!data.contacts[key]) data.contacts[key] = [];
+    if (!data.contacts[key].includes(contactKey)) data.contacts[key].push(contactKey);
+
+    if (!data.contacts[contactKey]) data.contacts[contactKey] = [];
+    if (!data.contacts[contactKey].includes(key)) data.contacts[contactKey].push(key);
+
+    save();
+    return { success: true, contact: sanitizeUser(data.users[contactKey]) };
+  },
+
+  removeContact(username, contactUsername) {
+    const key = username.toLowerCase().trim();
+    const contactKey = contactUsername.toLowerCase().trim();
+
+    if (data.contacts[key]) {
+      data.contacts[key] = data.contacts[key].filter(c => c !== contactKey);
+    }
+    if (data.contacts[contactKey]) {
+      data.contacts[contactKey] = data.contacts[contactKey].filter(c => c !== key);
+    }
+
+    save();
+    return { success: true };
+  },
+
   saveMessage({ sender, recipient, type, content, mediaUrl, duration }) {
     const msg = {
       id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
@@ -305,7 +549,7 @@ module.exports = {
       mediaUrl: mediaUrl || null,
       duration: duration || null,
       timestamp: Date.now(),
-      isProtected: true // End-to-End protected
+      isProtected: true
     };
     data.messages.push(msg);
 
@@ -374,114 +618,5 @@ module.exports = {
 
     save();
     return { success: true };
-  },
-
-  // ================= REELS (SHORT VIDEOS) =================
-  createReel({ creator, videoUrl, caption }) {
-    const reel = {
-      id: 'reel_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-      creator: creator.trim(),
-      videoUrl,
-      caption: caption || '',
-      likes: [],
-      comments: [],
-      timestamp: Date.now()
-    };
-    data.reels.unshift(reel); // Latest first
-    save();
-    return reel;
-  },
-
-  getAllReels() {
-    return data.reels.map(r => {
-      const u = data.users[r.creator.toLowerCase()];
-      return {
-        ...r,
-        creatorDisplayName: u ? (u.displayName || u.username) : r.creator,
-        creatorAvatar: u ? u.avatarUrl : '/avatars/avatar-1.svg',
-        creatorUserId: u ? u.userId : '---'
-      };
-    });
-  },
-
-  deleteReel(reelId, requesterUsername) {
-    const req = requesterUsername.toLowerCase().trim();
-    const index = data.reels.findIndex(r => r.id === reelId);
-    if (index === -1) return { success: false, error: 'الفيديو غير موجود' };
-
-    if (data.reels[index].creator.toLowerCase() !== req) {
-      return { success: false, error: 'لا يمكنك حذف سوى مقاطعك الخاصة' };
-    }
-
-    data.reels.splice(index, 1);
-    save();
-    return { success: true };
-  },
-
-  toggleLikeReel(reelId, username) {
-    const uKey = username.toLowerCase().trim();
-    const user = data.users[uKey];
-    const reel = data.reels.find(r => r.id === reelId);
-
-    if (!reel || !user) return { success: false, error: 'غير موجود' };
-
-    if (!reel.likes) reel.likes = [];
-    if (!user.likedReels) user.likedReels = [];
-
-    const alreadyLiked = reel.likes.includes(username);
-
-    if (alreadyLiked) {
-      reel.likes = reel.likes.filter(u => u !== username);
-      user.likedReels = user.likedReels.filter(id => id !== reelId);
-    } else {
-      reel.likes.push(username);
-      if (!user.likedReels.includes(reelId)) {
-        user.likedReels.push(reelId);
-      }
-    }
-
-    save();
-    return {
-      success: true,
-      liked: !alreadyLiked,
-      likesCount: reel.likes.length
-    };
-  },
-
-  addReelComment(reelId, { username, text }) {
-    const reel = data.reels.find(r => r.id === reelId);
-    const user = data.users[username.toLowerCase().trim()];
-    if (!reel || !user) return { success: false, error: 'غير موجود' };
-
-    const comment = {
-      id: 'cmt_' + Date.now(),
-      username: user.username,
-      displayName: user.displayName || user.username,
-      avatarUrl: user.avatarUrl,
-      text: text.trim(),
-      timestamp: Date.now()
-    };
-
-    if (!reel.comments) reel.comments = [];
-    reel.comments.push(comment);
-    save();
-    return { success: true, comment };
-  },
-
-  getUserLikedReels(username) {
-    const uKey = username.toLowerCase().trim();
-    const user = data.users[uKey];
-    if (!user || !user.likedReels) return [];
-
-    return data.reels
-      .filter(r => user.likedReels.includes(r.id))
-      .map(r => {
-        const u = data.users[r.creator.toLowerCase()];
-        return {
-          ...r,
-          creatorDisplayName: u ? (u.displayName || u.username) : r.creator,
-          creatorAvatar: u ? u.avatarUrl : '/avatars/avatar-1.svg'
-        };
-      });
   }
 };
