@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تطبيق المحادثات السريعة - شات وفوكال</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Google Fonts: Cairo -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <!-- LOGIN / PROFILE SETUP OVERLAY -->
+  <div id="loginModal" class="modal-overlay active">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="app-badge"><i data-lucide="message-square"></i></div>
+        <h2>مرحباً بك في المحادثات!</h2>
+        <p>اكتب اسمك واختر صورتك لتبدأ التحدث فوراً</p>
+      </div>
+
+      <div class="profile-setup">
+        <!-- Selected Avatar Preview -->
+        <div class="avatar-preview-wrapper">
+          <img id="avatarPreview" src="/avatars/avatar-1.svg" alt="الصورة المختارة">
+          <label for="customAvatarInput" class="upload-badge" title="رفع صورة من جهازك">
+            <i data-lucide="camera"></i>
+          </label>
+          <input type="file" id="customAvatarInput" accept="image/*" style="display: none;">
+        </div>
+
+        <p class="avatar-hint">اختر صورة جاهزة أو اضغط على الكاميرا لرفع صورتك الشخصية:</p>
+
+        <!-- Avatar Presets -->
+        <div class="avatar-presets">
+          <img src="/avatars/avatar-1.svg" class="preset-img active" data-src="/avatars/avatar-1.svg" alt="أفاتار 1">
+          <img src="/avatars/avatar-2.svg" class="preset-img" data-src="/avatars/avatar-2.svg" alt="أفاتار 2">
+          <img src="/avatars/avatar-3.svg" class="preset-img" data-src="/avatars/avatar-3.svg" alt="أفاتار 3">
+          <img src="/avatars/avatar-4.svg" class="preset-img" data-src="/avatars/avatar-4.svg" alt="أفاتار 4">
+          <img src="/avatars/avatar-5.svg" class="preset-img" data-src="/avatars/avatar-5.svg" alt="أفاتار 5">
+          <img src="/avatars/avatar-6.svg" class="preset-img" data-src="/avatars/avatar-6.svg" alt="أفاتار 6">
+        </div>
+
+        <!-- Name Input -->
+        <div class="input-group">
+          <label for="usernameInput">اسمك (اللقب أو الاسم المستعار):</label>
+          <div class="input-field">
+            <i data-lucide="user"></i>
+            <input type="text" id="usernameInput" placeholder="اكتب اسمك هنا..." maxlength="25">
+          </div>
+        </div>
+
+        <button id="loginBtn" class="btn btn-primary btn-block">
+          <span>دخول للمحادثات</span>
+          <i data-lucide="arrow-left"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD CONTACT MODAL -->
+  <div id="addContactModal" class="modal-overlay">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <div class="app-badge"><i data-lucide="user-plus"></i></div>
+        <h3>إضافة شخص جديد</h3>
+        <p>اكتب اسم المستخدم للتحدث معه</p>
+      </div>
+
+      <div class="input-group">
+        <div class="input-field">
+          <i data-lucide="search"></i>
+          <input type="text" id="newContactInput" placeholder="اسم الشخص (مثال: ahmed)...">
+        </div>
+      </div>
+
+      <div id="contactError" class="error-msg"></div>
+
+      <div class="modal-actions">
+        <button id="cancelAddContactBtn" class="btn btn-secondary">إلغاء</button>
+        <button id="confirmAddContactBtn" class="btn btn-primary">إضافة وبدء المحادثة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX FOR IMAGES -->
+  <div id="lightbox" class="lightbox">
+    <button class="lightbox-close" id="closeLightbox"><i data-lucide="x"></i></button>
+    <img id="lightboxImg" src="" alt="عرض الصورة">
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <div class="app-container">
+    
+    <!-- SIDEBAR (CONTACTS & PROFILE) -->
+    <aside class="sidebar" id="sidebar">
+      
+      <!-- Current User Header -->
+      <div class="sidebar-user">
+        <div class="user-info">
+          <div class="avatar-container">
+            <img id="currentUserAvatar" src="/avatars/avatar-1.svg" alt="أنا">
+            <span class="status-indicator online"></span>
+          </div>
+          <div class="user-details">
+            <h4 id="currentUserName">جاري التحميل...</h4>
+            <span class="user-tag">متصل</span>
+          </div>
+        </div>
+        <button id="logoutBtn" class="btn-icon" title="تغيير الحساب">
+          <i data-lucide="log-out"></i>
+        </button>
+      </div>
+
+      <!-- Action: Add Contact Button -->
+      <div class="sidebar-actions">
+        <button id="openAddContactBtn" class="btn btn-add">
+          <i data-lucide="user-plus"></i>
+          <span>إضافة شخص جديد</span>
+        </button>
+      </div>
+
+      <!-- Search Contacts / Room Switcher -->
+      <div class="chat-tabs">
+        <button class="tab-btn active" data-tab="contacts">
+          <i data-lucide="users"></i> جهات الاتصال
+        </button>
+        <button class="tab-btn" data-tab="global">
+          <i data-lucide="globe"></i> الغرفة العامة
+        </button>
+      </div>
+
+      <!-- Contacts List -->
+      <div class="contacts-list" id="contactsList">
+        <!-- Rendered via JS -->
+      </div>
+    </aside>
+
+    <!-- CHAT AREA -->
+    <main class="chat-area" id="chatArea">
+      
+      <!-- Chat Header -->
+      <header class="chat-header">
+        <div class="chat-header-contact">
+          <button id="backToSidebarBtn" class="btn-icon mobile-only" title="رجوع">
+            <i data-lucide="arrow-right"></i>
+          </button>
+          <div class="avatar-container">
+            <img id="activeChatAvatar" src="/avatars/avatar-1.svg" alt="المحادثة">
+            <span id="activeChatStatusIndicator" class="status-indicator"></span>
+          </div>
+          <div class="contact-meta">
+            <h3 id="activeChatName">اختر شخصاً للتحدث معه</h3>
+            <span id="activeChatStatus" class="contact-status-text">انقر على شخص من القائمة للبدء</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Messages Viewport -->
+      <div class="messages-viewport" id="messagesViewport">
+        <div class="no-chat-placeholder" id="noChatPlaceholder">
+          <div class="placeholder-icon"><i data-lucide="message-circle"></i></div>
+          <h3>ابدأ المحادثة الآن!</h3>
+          <p>اختر شخصاً من القائمة الجانبية أو أضف شخصاً جديداً بالاسم لتبادل الرسائل والصور والتسجيلات الصوتية (الفوكال).</p>
+        </div>
+        <div class="messages-list" id="messagesList" style="display: none;">
+          <!-- Dynamically populated messages -->
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div id="typingIndicator" class="typing-indicator" style="display: none;">
+        <span></span><span></span><span></span>
+        <small id="typingText">يكتب الآن...</small>
+      </div>
+
+      <!-- Chat Input Area -->
+      <footer class="chat-input-bar" id="chatInputBar">
+        
+        <!-- Normal Input State -->
+        <div class="input-controls" id="normalControls">
+          
+          <!-- Image Attachment -->
+          <label for="imageUploadInput" class="btn-icon" title="إرسال صورة">
+            <i data-lucide="image"></i>
+          </label>
+          <input type="file" id="imageUploadInput" accept="image/*" style="display: none;">
+
+          <!-- Text Input -->
+          <input type="text" id="messageInput" placeholder="اكتب رسالتك هنا..." autocomplete="off">
+
+          <!-- Send Text Button -->
+          <button id="sendBtn" class="btn-icon btn-send" title="إرسال">
+            <i data-lucide="send"></i>
+          </button>
+
+          <!-- Record Voice / Vocal Button -->
+          <button id="recordVocalBtn" class="btn-icon btn-mic" title="تسجيل فوكال (رسالة صوتية)">
+            <i data-lucide="mic"></i>
+          </button>
+        </div>
+
+        <!-- Vocal Recording State (Shown while recording) -->
+        <div class="recording-bar" id="recordingBar" style="display: none;">
+          <div class="recording-info">
+            <span class="recording-dot"></span>
+            <span id="recordingTimer">00:00</span>
+            <div class="recording-waveform">
+              <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+              <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            </div>
+            <span class="recording-label">جاري تسجيل الفوكال...</span>
+          </div>
+          <div class="recording-actions">
+            <button id="cancelRecordBtn" class="btn-round btn-cancel" title="إلغاء التسجيل">
+              <i data-lucide="trash-2"></i>
+            </button>
+            <button id="sendRecordBtn" class="btn-round btn-success" title="إرسال الفوكال">
+              <i data-lucide="arrow-up"></i>
+            </button>
+          </div>
+        </div>
+
+      </footer>
+
+    </main>
+
+  </div>
+
+  <!-- Socket.IO -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- App JS -->
+  <script src="app.js"></script>
+</body>
+</html>
