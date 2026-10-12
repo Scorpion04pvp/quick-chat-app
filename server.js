@@ -11,7 +11,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' },
-  maxHttpBufferSize: 1e8 // 100MB for media
+  maxHttpBufferSize: 1e8 // 100MB
 });
 
 const PORT = process.env.PORT || 3000;
@@ -32,7 +32,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 25 * 1024 * 1024 } // 25 MB max
+  limits: { fileSize: 25 * 1024 * 1024 }
 });
 
 app.use(cors());
@@ -44,18 +44,60 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 // Track online users: username.toLowerCase() -> Set of socket.ids
 const onlineUsers = new Map();
 
+// -------------------------------------------------------------------
 // REST API
-app.post('/api/login', (req, res) => {
-  const { username, avatarUrl } = req.body;
-  if (!username || !username.trim()) {
-    return res.status(400).json({ error: 'اسم المستخدم مطلوب' });
-  }
+// -------------------------------------------------------------------
 
-  const cleanUser = username.trim();
-  const user = db.saveUser(cleanUser, avatarUrl);
-  return res.json({ success: true, user });
+// Register new account with password
+app.post('/api/register', (req, res) => {
+  const { username, password, displayName, avatarUrl } = req.body;
+  const result = db.registerUser({ username, password, displayName, avatarUrl });
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.json({ success: true, user: result.user });
 });
 
+// Login with username and password
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
+  const result = db.loginUser({ username, password });
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.json({ success: true, user: result.user });
+});
+
+// Update Profile (Display Name, Avatar, Chat Wallpaper, Theme)
+app.post('/api/profile/update', (req, res) => {
+  const { username, displayName, avatarUrl, chatWallpaper, theme } = req.body;
+  if (!username) return res.status(400).json({ error: 'اسم المستخدم مطلوب' });
+
+  const result = db.updateUserProfile(username, { displayName, avatarUrl, chatWallpaper, theme });
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.json({ success: true, user: result.user });
+});
+
+// Get user profile (for viewing someone's profile card)
+app.get('/api/user-profile', (req, res) => {
+  const { identifier } = req.query;
+  if (!identifier) return res.status(400).json({ error: 'المعرف مطلوب' });
+
+  const user = db.getUserByUsernameOrId(identifier);
+  if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
+
+  const isOnline = onlineUsers.has(user.username.toLowerCase()) && onlineUsers.get(user.username.toLowerCase()).size > 0;
+  return res.json({
+    user: {
+      ...user,
+      online: isOnline
+    }
+  });
+});
+
+// Upload media (image, audio, wallpaper)
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'لم يتم إرسال أي ملف' });
@@ -69,6 +111,7 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   });
 });
 
+// Get contacts list
 app.get('/api/contacts', (req, res) => {
   const { username } = req.query;
   if (!username) return res.status(400).json({ error: 'اسم المستخدم مطلوب' });
@@ -79,14 +122,15 @@ app.get('/api/contacts', (req, res) => {
     const lastMsg = db.getLastMessage(username, cName);
     const isOnline = onlineUsers.has(cName.toLowerCase()) && onlineUsers.get(cName.toLowerCase()).size > 0;
     return {
+      userId: u ? u.userId : '---',
       username: u ? u.username : cName,
+      displayName: u ? (u.displayName || u.username) : cName,
       avatarUrl: u ? u.avatarUrl : '/avatars/avatar-1.svg',
       online: isOnline,
       lastMessage: lastMsg
     };
   });
 
-  // Sort contacts by latest message timestamp
   contacts.sort((a, b) => {
     const timeA = a.lastMessage ? a.lastMessage.timestamp : 0;
     const timeB = b.lastMessage ? b.lastMessage.timestamp : 0;
@@ -96,18 +140,25 @@ app.get('/api/contacts', (req, res) => {
   return res.json({ contacts });
 });
 
+// Add contact by User ID or Username
 app.post('/api/contacts', (req, res) => {
-  const { username, contactUsername } = req.body;
-  if (!username || !contactUsername) {
+  const { username, identifier } = req.body;
+  if (!username || !identifier) {
     return res.status(400).json({ error: 'البيانات غير مكتملة' });
   }
 
-  const result = db.addContact(username, contactUsername);
+  // Find user by ID or Username
+  const targetUser = db.getUserByUsernameOrId(identifier);
+  if (!targetUser) {
+    return res.status(404).json({ error: 'لم يتم العثور على مستخدم بهذا المعرف (User ID) أو الاسم' });
+  }
+
+  const result = db.addContact(username, targetUser.username);
   if (!result.success) {
     return res.status(400).json({ error: result.message });
   }
 
-  const isOnline = onlineUsers.has(contactUsername.toLowerCase().trim());
+  const isOnline = onlineUsers.has(targetUser.username.toLowerCase());
   return res.json({
     success: true,
     contact: {
@@ -118,26 +169,27 @@ app.post('/api/contacts', (req, res) => {
   });
 });
 
-app.get('/api/users/search', (req, res) => {
-  const { query, current } = req.query;
-  if (!query) return res.json({ users: [] });
+// Delete conversation
+app.post('/api/conversation/delete', (req, res) => {
+  const { user1, user2 } = req.body;
+  if (!user1 || !user2) return res.status(400).json({ error: 'بيانات غير مكتملة' });
 
-  const q = query.toLowerCase().trim();
-  const curr = (current || '').toLowerCase().trim();
+  db.deleteConversation(user1, user2);
 
-  const all = db.getAllUsers();
-  const matched = all.filter(u => {
-    const un = u.username.toLowerCase();
-    return un !== curr && un.includes(q);
-  }).map(u => ({
-    username: u.username,
-    avatarUrl: u.avatarUrl,
-    online: onlineUsers.has(u.username.toLowerCase())
-  }));
+  // Notify socket rooms
+  const u1Key = user1.toLowerCase();
+  const u2Key = user2.toLowerCase();
+  if (u2Key === 'global') {
+    io.to('room:global').emit('conversation_deleted', { recipient: 'global' });
+  } else {
+    io.to('user:' + u1Key).emit('conversation_deleted', { withUser: user2 });
+    io.to('user:' + u2Key).emit('conversation_deleted', { withUser: user1 });
+  }
 
-  return res.json({ users: matched });
+  return res.json({ success: true });
 });
 
+// Get messages history
 app.get('/api/messages', (req, res) => {
   const { user1, user2 } = req.query;
   if (!user1 || !user2) {
@@ -148,7 +200,9 @@ app.get('/api/messages', (req, res) => {
   return res.json({ messages });
 });
 
+// -------------------------------------------------------------------
 // Socket.io Realtime Logic
+// -------------------------------------------------------------------
 io.on('connection', (socket) => {
   let authenticatedUser = null;
 
@@ -163,14 +217,10 @@ io.on('connection', (socket) => {
     }
     onlineUsers.get(key).add(socket.id);
 
-    // Join room with own username for direct messages
     socket.join('user:' + key);
-    // Join global public room
     socket.join('room:global');
 
     db.updateUserLastSeen(username);
-
-    // Broadcast online status
     io.emit('user_status', { username, online: true });
   });
 
@@ -195,9 +245,7 @@ io.on('connection', (socket) => {
     if (recipientKey === 'global') {
       io.to('room:global').emit('new_message', savedMsg);
     } else {
-      // Send to recipient
       io.to('user:' + recipientKey).emit('new_message', savedMsg);
-      // Send back to sender's devices
       io.to('user:' + senderKey).emit('new_message', savedMsg);
     }
   });

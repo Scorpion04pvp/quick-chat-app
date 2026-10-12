@@ -1,4 +1,4 @@
-// Antigravity Chat Application - Client Logic
+// Antigravity Chat Application - Professional Edition 2.0
 
 let currentUser = null;
 let activeRecipient = null; // username or 'global'
@@ -18,17 +18,44 @@ let currentlyPlayingAudio = null;
 let currentlyPlayingBtn = null;
 
 // DOM Elements
-const loginModal = document.getElementById('loginModal');
-const loginBtn = document.getElementById('loginBtn');
-const usernameInput = document.getElementById('usernameInput');
-const avatarPreview = document.getElementById('avatarPreview');
-const customAvatarInput = document.getElementById('customAvatarInput');
-const avatarPresets = document.querySelectorAll('.preset-img');
+const authModal = document.getElementById('authModal');
+const tabLoginBtn = document.getElementById('tabLoginBtn');
+const tabRegisterBtn = document.getElementById('tabRegisterBtn');
+const loginForm = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+
+const loginUsername = document.getElementById('loginUsername');
+const loginPassword = document.getElementById('loginPassword');
+const submitLoginBtn = document.getElementById('submitLoginBtn');
+const loginError = document.getElementById('loginError');
+
+const registerAvatarPreview = document.getElementById('registerAvatarPreview');
+const registerAvatarFile = document.getElementById('registerAvatarFile');
+const registerPresets = document.querySelectorAll('.avatar-presets .preset-img');
+const registerDisplayName = document.getElementById('registerDisplayName');
+const registerUsername = document.getElementById('registerUsername');
+const registerPassword = document.getElementById('registerPassword');
+const submitRegisterBtn = document.getElementById('submitRegisterBtn');
+const registerError = document.getElementById('registerError');
+
+// Profile & Sidebar
+const openMyProfileBtn = document.getElementById('openMyProfileBtn');
+const userProfileModal = document.getElementById('userProfileModal');
+const myProfileAvatar = document.getElementById('myProfileAvatar');
+const editMyAvatarFile = document.getElementById('editMyAvatarFile');
+const myUserIdBadge = document.getElementById('myUserIdBadge');
+const copyMyIdBtn = document.getElementById('copyMyIdBtn');
+const myDisplayNameInput = document.getElementById('myDisplayNameInput');
+const saveProfileBtn = document.getElementById('saveProfileBtn');
+const closeProfileBtn = document.getElementById('closeProfileBtn');
 
 const currentUserAvatar = document.getElementById('currentUserAvatar');
 const currentUserName = document.getElementById('currentUserName');
+const currentUserTag = document.getElementById('currentUserTag');
+const quickSettingsBtn = document.getElementById('quickSettingsBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 
+// Add Contact Modal
 const openAddContactBtn = document.getElementById('openAddContactBtn');
 const addContactModal = document.getElementById('addContactModal');
 const newContactInput = document.getElementById('newContactInput');
@@ -36,17 +63,41 @@ const confirmAddContactBtn = document.getElementById('confirmAddContactBtn');
 const cancelAddContactBtn = document.getElementById('cancelAddContactBtn');
 const contactError = document.getElementById('contactError');
 
-const tabBtns = document.querySelectorAll('.tab-btn');
-const contactsList = document.getElementById('contactsList');
+// View Contact Profile Modal
+const contactProfileModal = document.getElementById('contactProfileModal');
+const viewContactAvatar = document.getElementById('viewContactAvatar');
+const viewContactName = document.getElementById('viewContactName');
+const viewContactStatusBadge = document.getElementById('viewContactStatusBadge');
+const viewContactUsername = document.getElementById('viewContactUsername');
+const viewContactUserId = document.getElementById('viewContactUserId');
+const deleteChatFromProfileBtn = document.getElementById('deleteChatFromProfileBtn');
+const closeContactProfileBtn = document.getElementById('closeContactProfileBtn');
+const chatHeaderContactInfo = document.getElementById('chatHeaderContactInfo');
+const viewProfileFromHeaderBtn = document.getElementById('viewProfileFromHeaderBtn');
 
+// Chat Settings & Themes Modal
+const chatSettingsModal = document.getElementById('chatSettingsModal');
+const openChatThemeSettingsBtn = document.getElementById('openChatThemeSettingsBtn');
+const closeChatSettingsBtn = document.getElementById('closeChatSettingsBtn');
+const themeOptions = document.querySelectorAll('.theme-option');
+const wallpaperUploadInput = document.getElementById('wallpaperUploadInput');
+const resetWallpaperBtn = document.getElementById('resetWallpaperBtn');
+const deleteChatBtn = document.getElementById('deleteChatBtn');
+const quickDeleteChatBtn = document.getElementById('quickDeleteChatBtn');
+
+// Tabs & Lists
+const tabBtns = document.querySelectorAll('.chat-tabs .tab-btn');
+const contactsList = document.getElementById('contactsList');
 const chatArea = document.getElementById('chatArea');
 const sidebar = document.getElementById('sidebar');
 const backToSidebarBtn = document.getElementById('backToSidebarBtn');
 
+// Chat Header & Viewport
 const activeChatAvatar = document.getElementById('activeChatAvatar');
 const activeChatName = document.getElementById('activeChatName');
 const activeChatStatus = document.getElementById('activeChatStatus');
 const activeChatStatusIndicator = document.getElementById('activeChatStatusIndicator');
+const chatHeaderActions = document.getElementById('chatHeaderActions');
 
 const messagesViewport = document.getElementById('messagesViewport');
 const noChatPlaceholder = document.getElementById('noChatPlaceholder');
@@ -54,6 +105,7 @@ const messagesList = document.getElementById('messagesList');
 const typingIndicator = document.getElementById('typingIndicator');
 const typingText = document.getElementById('typingText');
 
+// Chat Input
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
 const imageUploadInput = document.getElementById('imageUploadInput');
@@ -65,18 +117,17 @@ const recordingTimer = document.getElementById('recordingTimer');
 const cancelRecordBtn = document.getElementById('cancelRecordBtn');
 const sendRecordBtn = document.getElementById('sendRecordBtn');
 
+// Lightbox
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightboxImg');
 const closeLightbox = document.getElementById('closeLightbox');
 
-// Initialize Lucide Icons
 function refreshIcons() {
   if (window.lucide) {
     window.lucide.createIcons();
   }
 }
 
-// Format time
 function formatTime(timestamp) {
   if (!timestamp) return '';
   const date = new Date(timestamp);
@@ -90,83 +141,400 @@ function formatDuration(sec) {
 }
 
 // -------------------------------------------------------------
-// USER LOGIN & PROFILE LOGIC
+// AUTHENTICATION (LOGIN & REGISTER)
 // -------------------------------------------------------------
 
-// Select preset avatar
-avatarPresets.forEach(preset => {
-  preset.addEventListener('click', () => {
-    avatarPresets.forEach(p => p.classList.remove('active'));
-    preset.classList.add('active');
-    avatarPreview.src = preset.dataset.src;
+// Switch Auth Tabs
+tabLoginBtn.addEventListener('click', () => {
+  tabLoginBtn.classList.add('active');
+  tabRegisterBtn.classList.remove('active');
+  loginForm.style.display = 'block';
+  registerForm.style.display = 'none';
+  loginError.style.display = 'none';
+});
+
+tabRegisterBtn.addEventListener('click', () => {
+  tabRegisterBtn.classList.add('active');
+  tabLoginBtn.classList.remove('active');
+  registerForm.style.display = 'block';
+  loginForm.style.display = 'none';
+  registerError.style.display = 'none';
+});
+
+// Register Avatar Presets
+registerPresets.forEach(p => {
+  p.addEventListener('click', () => {
+    registerPresets.forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    registerAvatarPreview.src = p.dataset.src;
   });
 });
 
-// Upload custom avatar
-customAvatarInput.addEventListener('change', async (e) => {
+// Upload custom avatar in register
+registerAvatarFile.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  const formData = new FormData();
-  formData.append('file', file);
-
+  const fd = new FormData();
+  fd.append('file', file);
   try {
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData
-    });
-    const data = await res.json();
-    if (data.url) {
-      avatarPreview.src = data.url;
-      avatarPresets.forEach(p => p.classList.remove('active'));
+    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    const d = await res.json();
+    if (d.url) {
+      registerAvatarPreview.src = d.url;
+      registerPresets.forEach(x => x.classList.remove('active'));
     }
   } catch (err) {
-    alert('تعذر رفع الصورة، حاول مرة أخرى');
+    alert('تعذر رفع الصورة');
   }
 });
 
 // Submit Login
-loginBtn.addEventListener('click', async () => {
-  const username = usernameInput.value.trim();
-  if (!username) {
-    usernameInput.focus();
-    usernameInput.style.borderColor = '#ef4444';
+submitLoginBtn.addEventListener('click', async () => {
+  const username = loginUsername.value.trim();
+  const password = loginPassword.value;
+
+  if (!username || !password) {
+    loginError.textContent = 'يرجى إدخال اسم المستخدم وكلمة المرور';
+    loginError.style.display = 'block';
     return;
   }
-
-  const avatarUrl = avatarPreview.src;
 
   try {
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, avatarUrl })
+      body: JSON.stringify({ username, password })
     });
     const data = await res.json();
 
     if (data.success) {
-      currentUser = data.user;
-      localStorage.setItem('chatapp_user', JSON.stringify(currentUser));
-      loginModal.classList.remove('active');
+      setCurrentUser(data.user);
+      authModal.classList.remove('active');
       setupApp();
     } else {
-      alert(data.error || 'حدث خطأ أثناء الدخول');
+      loginError.textContent = data.error || 'فشل تسجيل الدخول';
+      loginError.style.display = 'block';
     }
   } catch (err) {
-    alert('فشل الاتصال بالخادم');
+    loginError.textContent = 'فشل الاتصال بالخادم';
+    loginError.style.display = 'block';
   }
 });
 
-usernameInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') loginBtn.click();
+// Submit Register
+submitRegisterBtn.addEventListener('click', async () => {
+  const username = registerUsername.value.trim();
+  const password = registerPassword.value;
+  const displayName = registerDisplayName.value.trim() || username;
+  const avatarUrl = registerAvatarPreview.src;
+
+  if (!username || !password) {
+    registerError.textContent = 'يرجى إدخال اسم المستخدم وكلمة المرور';
+    registerError.style.display = 'block';
+    return;
+  }
+
+  if (password.length < 4) {
+    registerError.textContent = 'كلمة المرور يجب أن تكون 4 أحرف أو أرقام على الأقل';
+    registerError.style.display = 'block';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, displayName, avatarUrl })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      setCurrentUser(data.user);
+      authModal.classList.remove('active');
+      setupApp();
+    } else {
+      registerError.textContent = data.error || 'تعذر إنشاء الحساب';
+      registerError.style.display = 'block';
+    }
+  } catch (err) {
+    registerError.textContent = 'فشل الاتصال بالخادم';
+    registerError.style.display = 'block';
+  }
 });
 
-// Logout / Switch account
-logoutBtn.addEventListener('click', () => {
-  if (confirm('هل ترغب في تسجيل الخروج أو تغيير الحساب؟')) {
-    localStorage.removeItem('chatapp_user');
+function setCurrentUser(user) {
+  currentUser = user;
+  localStorage.setItem('chatapp_user_v2', JSON.stringify(user));
+  applyTheme(user.theme || 'midnight');
+  if (user.chatWallpaper) {
+    messagesViewport.style.backgroundImage = `url("${user.chatWallpaper}")`;
+  }
+}
+
+// Logout
+logoutBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (confirm('هل ترغب بالتأكيد في تسجيل الخروج؟')) {
+    localStorage.removeItem('chatapp_user_v2');
     window.location.reload();
   }
+});
+
+// -------------------------------------------------------------
+// USER PROFILE MODAL & EDITING
+// -------------------------------------------------------------
+
+openMyProfileBtn.addEventListener('click', () => {
+  if (!currentUser) return;
+  myProfileAvatar.src = currentUser.avatarUrl || '/avatars/avatar-1.svg';
+  myUserIdBadge.textContent = currentUser.userId || 'ID-00000';
+  myDisplayNameInput.value = currentUser.displayName || currentUser.username;
+  userProfileModal.classList.add('active');
+});
+
+closeProfileBtn.addEventListener('click', () => {
+  userProfileModal.classList.remove('active');
+});
+
+// Copy User ID Button
+copyMyIdBtn.addEventListener('click', () => {
+  if (!currentUser || !currentUser.userId) return;
+  navigator.clipboard.writeText(currentUser.userId).then(() => {
+    const origText = copyMyIdBtn.innerHTML;
+    copyMyIdBtn.innerHTML = '<i data-lucide="check"></i> <span>تم النسخ!</span>';
+    refreshIcons();
+    setTimeout(() => {
+      copyMyIdBtn.innerHTML = origText;
+      refreshIcons();
+    }, 2000);
+  });
+});
+
+// Edit profile avatar
+editMyAvatarFile.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.url) {
+      myProfileAvatar.src = data.url;
+    }
+  } catch (err) {
+    alert('تعذر رفع الصورة');
+  }
+});
+
+// Save Profile Updates
+saveProfileBtn.addEventListener('click', async () => {
+  const newName = myDisplayNameInput.value.trim();
+  const newAvatar = myProfileAvatar.src;
+
+  try {
+    const res = await fetch('/api/profile/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: currentUser.username,
+        displayName: newName,
+        avatarUrl: newAvatar
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      setCurrentUser(data.user);
+      currentUserName.textContent = data.user.displayName;
+      currentUserAvatar.src = data.user.avatarUrl;
+      userProfileModal.classList.remove('active');
+      alert('تم حفظ بيانات الملف الشخصي بنجاح!');
+    }
+  } catch (err) {
+    alert('تعذر حفظ البيانات');
+  }
+});
+
+// -------------------------------------------------------------
+// THEMES & CHAT WALLPAPERS
+// -------------------------------------------------------------
+
+quickSettingsBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  chatSettingsModal.classList.add('active');
+});
+
+openChatThemeSettingsBtn.addEventListener('click', () => {
+  chatSettingsModal.classList.add('active');
+});
+
+closeChatSettingsBtn.addEventListener('click', () => {
+  chatSettingsModal.classList.remove('active');
+});
+
+function applyTheme(themeName) {
+  document.body.dataset.theme = themeName;
+  themeOptions.forEach(opt => {
+    if (opt.dataset.themeVal === themeName) opt.classList.add('active');
+    else opt.classList.remove('active');
+  });
+}
+
+themeOptions.forEach(opt => {
+  opt.addEventListener('click', async () => {
+    const chosenTheme = opt.dataset.themeVal;
+    applyTheme(chosenTheme);
+    if (currentUser) {
+      currentUser.theme = chosenTheme;
+      localStorage.setItem('chatapp_user_v2', JSON.stringify(currentUser));
+      await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: currentUser.username, theme: chosenTheme })
+      });
+    }
+  });
+});
+
+// Wallpaper upload
+wallpaperUploadInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.url) {
+      messagesViewport.style.backgroundImage = `url("${data.url}")`;
+      if (currentUser) {
+        currentUser.chatWallpaper = data.url;
+        localStorage.setItem('chatapp_user_v2', JSON.stringify(currentUser));
+        await fetch('/api/profile/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: currentUser.username, chatWallpaper: data.url })
+        });
+      }
+      alert('تم تعيين خلفية المحادثة بنجاح!');
+    }
+  } catch (err) {
+    alert('تعذر تعيين الخلفية');
+  }
+});
+
+// Reset Wallpaper
+resetWallpaperBtn.addEventListener('click', async () => {
+  messagesViewport.style.backgroundImage = '';
+  if (currentUser) {
+    currentUser.chatWallpaper = null;
+    localStorage.setItem('chatapp_user_v2', JSON.stringify(currentUser));
+    await fetch('/api/profile/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser.username, chatWallpaper: null })
+    });
+  }
+  alert('تمت استعادة الخلفية الافتراضية');
+});
+
+// -------------------------------------------------------------
+// DELETE CONVERSATION
+// -------------------------------------------------------------
+
+async function deleteActiveConversation() {
+  if (!activeRecipient) {
+    alert('يرجى اختيار محادثة أولاً');
+    return;
+  }
+
+  const isGlobal = activeRecipient === 'global';
+  const confirmMsg = isGlobal
+    ? 'هل أنت متأكد من مسح جميع رسائل الغرفة العامة؟'
+    : `هل أنت متأكد من حذف جميع الرسائل في المحادثة مع "${activeRecipient}"؟`;
+
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    const res = await fetch('/api/conversation/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user1: currentUser.username,
+        user2: activeRecipient
+      })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      messagesList.innerHTML = `
+        <div style="text-align:center; padding:30px; color:var(--text-muted); font-size: 0.9rem;">
+          تم مسح سجل المحادثة بالكامل.
+        </div>
+      `;
+      chatSettingsModal.classList.remove('active');
+      contactProfileModal.classList.remove('active');
+      loadContacts();
+    }
+  } catch (err) {
+    alert('تعذر حذف المحادثة');
+  }
+}
+
+deleteChatBtn.addEventListener('click', deleteActiveConversation);
+quickDeleteChatBtn.addEventListener('click', deleteActiveConversation);
+deleteChatFromProfileBtn.addEventListener('click', deleteActiveConversation);
+
+// -------------------------------------------------------------
+// CONTACT PROFILE MODAL (VIEW OTHERS)
+// -------------------------------------------------------------
+
+async function openContactProfile(identifier) {
+  if (!identifier || identifier === 'global') return;
+
+  try {
+    const res = await fetch(`/api/user-profile?identifier=${encodeURIComponent(identifier)}`);
+    const data = await res.json();
+
+    if (data.user) {
+      const u = data.user;
+      viewContactAvatar.src = u.avatarUrl || '/avatars/avatar-1.svg';
+      viewContactName.textContent = u.displayName || u.username;
+      viewContactUsername.textContent = '@' + u.username;
+      viewContactUserId.textContent = u.userId || '---';
+
+      if (u.online) {
+        viewContactStatusBadge.textContent = 'متصل الآن';
+        viewContactStatusBadge.className = 'status-badge online';
+      } else {
+        viewContactStatusBadge.textContent = 'غير متصل';
+        viewContactStatusBadge.className = 'status-badge';
+      }
+
+      contactProfileModal.classList.add('active');
+    }
+  } catch (err) {
+    alert('تعذر عرض بيانات الصديق');
+  }
+}
+
+chatHeaderContactInfo.addEventListener('click', () => {
+  if (activeRecipient && activeRecipient !== 'global') {
+    openContactProfile(activeRecipient);
+  }
+});
+
+viewProfileFromHeaderBtn.addEventListener('click', () => {
+  if (activeRecipient && activeRecipient !== 'global') {
+    openContactProfile(activeRecipient);
+  }
+});
+
+closeContactProfileBtn.addEventListener('click', () => {
+  contactProfileModal.classList.remove('active');
 });
 
 // -------------------------------------------------------------
@@ -175,30 +543,32 @@ logoutBtn.addEventListener('click', () => {
 
 function init() {
   refreshIcons();
-  const saved = localStorage.getItem('chatapp_user');
+  const saved = localStorage.getItem('chatapp_user_v2');
   if (saved) {
     try {
-      currentUser = JSON.parse(saved);
-      loginModal.classList.remove('active');
+      const parsed = JSON.parse(saved);
+      setCurrentUser(parsed);
+      authModal.classList.remove('active');
       setupApp();
       return;
     } catch (e) {
-      localStorage.removeItem('chatapp_user');
+      localStorage.removeItem('chatapp_user_v2');
     }
   }
-  loginModal.classList.add('active');
+  authModal.classList.add('active');
 }
 
 function setupApp() {
-  currentUserName.textContent = currentUser.username;
-  currentUserAvatar.src = currentUser.avatarUrl;
+  currentUserName.textContent = currentUser.displayName || currentUser.username;
+  currentUserTag.textContent = currentUser.userId || 'ID-00000';
+  currentUserAvatar.src = currentUser.avatarUrl || '/avatars/avatar-1.svg';
 
   initSocket();
   loadContacts();
 }
 
 // -------------------------------------------------------------
-// SOCKET.IO REALTIME CONNECTION
+// SOCKET.IO REALTIME
 // -------------------------------------------------------------
 
 function initSocket() {
@@ -209,13 +579,11 @@ function initSocket() {
   });
 
   socket.on('user_status', ({ username, online }) => {
-    // Update contact online status in list
     const c = contacts.find(x => x.username.toLowerCase() === username.toLowerCase());
     if (c) {
       c.online = online;
       renderContactsList();
     }
-    // Update active chat if currently talking to this user
     if (activeRecipient && activeRecipient.toLowerCase() === username.toLowerCase()) {
       updateActiveChatHeaderStatus(online);
     }
@@ -234,7 +602,15 @@ function initSocket() {
       messagesViewport.scrollTop = messagesViewport.scrollHeight;
     }
 
-    // Update contacts list last message
+    loadContacts();
+  });
+
+  socket.on('conversation_deleted', (payload) => {
+    if (activeRecipient === 'global' && payload.recipient === 'global') {
+      messagesList.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-muted);">تم مسح المحادثة.</div>';
+    } else if (activeRecipient && payload.withUser && payload.withUser.toLowerCase() === currentUser.username.toLowerCase()) {
+      messagesList.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-muted);">تم مسح المحادثة من الطرف الآخر.</div>';
+    }
     loadContacts();
   });
 
@@ -251,7 +627,7 @@ function initSocket() {
 }
 
 // -------------------------------------------------------------
-// CONTACTS MANAGEMENT
+// CONTACTS LIST & ADD FRIEND
 // -------------------------------------------------------------
 
 async function loadContacts() {
@@ -271,9 +647,9 @@ function renderContactsList() {
 
   if (contacts.length === 0) {
     contactsList.innerHTML = `
-      <div style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 0.85rem;">
-        لا توجد جهات اتصال بعد.<br>
-        اضغط على <b>إضافة شخص جديد</b> بالأعلى أو انتقل إلى <b>الغرفة العامة</b> للتحدث مع المتصلين.
+      <div style="text-align:center; padding: 24px 16px; color: var(--text-muted); font-size: 0.85rem;">
+        لا يوجد أصدقاء مضافين بعد.<br>
+        اضغط على <b>إضافة صديق برمز المعرف</b> أو شارك معرفك <b>${currentUser ? currentUser.userId : ''}</b> مع أصدقائك!
       </div>
     `;
     return;
@@ -283,7 +659,7 @@ function renderContactsList() {
     const card = document.createElement('div');
     card.className = `contact-card ${activeRecipient && activeRecipient.toLowerCase() === c.username.toLowerCase() ? 'active' : ''}`;
     
-    let lastMsgText = 'لا توجد رسائل سابقة';
+    let lastMsgText = 'لا توجد رسائل';
     if (c.lastMessage) {
       if (c.lastMessage.type === 'image') lastMsgText = '📷 صورة';
       else if (c.lastMessage.type === 'audio') lastMsgText = '🎙️ رسالة صوتية (فوكال)';
@@ -297,7 +673,7 @@ function renderContactsList() {
       </div>
       <div class="contact-info">
         <div class="contact-top">
-          <span class="contact-name">${c.username}</span>
+          <span class="contact-name">${c.displayName || c.username}</span>
           <span class="contact-time">${c.lastMessage ? formatTime(c.lastMessage.timestamp) : ''}</span>
         </div>
         <p class="contact-last-msg">${lastMsgText}</p>
@@ -305,29 +681,14 @@ function renderContactsList() {
     `;
 
     card.addEventListener('click', () => {
-      openChatWith(c.username, c.avatarUrl, c.online);
+      openChatWith(c.username, c.avatarUrl, c.online, c.displayName);
     });
 
     contactsList.appendChild(card);
   });
 }
 
-// Tab Switching (Contacts vs Global Lounge)
-tabBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    tabBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentTab = btn.dataset.tab;
-
-    if (currentTab === 'global') {
-      openChatWith('global', '/avatars/avatar-1.svg', true, 'الغرفة العامة (الكل)');
-    } else {
-      renderContactsList();
-    }
-  });
-});
-
-// Add Contact Modal
+// Add Friend Modal
 openAddContactBtn.addEventListener('click', () => {
   newContactInput.value = '';
   contactError.style.display = 'none';
@@ -340,8 +701,8 @@ cancelAddContactBtn.addEventListener('click', () => {
 });
 
 confirmAddContactBtn.addEventListener('click', async () => {
-  const targetUser = newContactInput.value.trim();
-  if (!targetUser) return;
+  const targetId = newContactInput.value.trim();
+  if (!targetId) return;
 
   try {
     const res = await fetch('/api/contacts', {
@@ -349,7 +710,7 @@ confirmAddContactBtn.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         username: currentUser.username,
-        contactUsername: targetUser
+        identifier: targetId
       })
     });
     const data = await res.json();
@@ -357,13 +718,13 @@ confirmAddContactBtn.addEventListener('click', async () => {
     if (data.success) {
       addContactModal.classList.remove('active');
       await loadContacts();
-      openChatWith(data.contact.username, data.contact.avatarUrl, data.contact.online);
+      openChatWith(data.contact.username, data.contact.avatarUrl, data.contact.online, data.contact.displayName);
     } else {
-      contactError.textContent = data.error || 'تعذر إضافة المستخدم';
+      contactError.textContent = data.error || 'تعذر إضافة الصديق';
       contactError.style.display = 'block';
     }
   } catch (err) {
-    contactError.textContent = 'حدث خطأ في الاتصال';
+    contactError.textContent = 'حدث خطأ أثناء البحث';
     contactError.style.display = 'block';
   }
 });
@@ -372,32 +733,43 @@ newContactInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') confirmAddContactBtn.click();
 });
 
+// Tab switcher (Contacts vs Global Lounge)
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTab = btn.dataset.tab;
+
+    if (currentTab === 'global') {
+      openChatWith('global', '/avatars/avatar-1.svg', true, 'الغرفة العامة (الجميع)');
+    } else {
+      renderContactsList();
+    }
+  });
+});
+
 // -------------------------------------------------------------
-// CHAT MESSAGES LOGIC
+// CHAT CONVERSATION VIEWPORT
 // -------------------------------------------------------------
 
 async function openChatWith(username, avatarUrl, isOnline, customTitle = null) {
   activeRecipient = username;
 
-  // Mobile layout switch
   if (window.innerWidth <= 768) {
     sidebar.classList.add('hidden');
   }
 
-  // Update Header
   activeChatName.textContent = customTitle || username;
   activeChatAvatar.src = avatarUrl || '/avatars/avatar-1.svg';
   updateActiveChatHeaderStatus(isOnline);
 
-  // Switch Viewport
+  chatHeaderActions.style.display = 'flex';
   noChatPlaceholder.style.display = 'none';
   messagesList.style.display = 'flex';
   messagesList.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">جاري تحميل المحادثة...</div>';
 
-  // Highlight in sidebar
   renderContactsList();
 
-  // Load History
   try {
     const res = await fetch(`/api/messages?user1=${encodeURIComponent(currentUser.username)}&user2=${encodeURIComponent(username)}`);
     const data = await res.json();
@@ -408,7 +780,7 @@ async function openChatWith(username, avatarUrl, isOnline, customTitle = null) {
     } else {
       messagesList.innerHTML = `
         <div style="text-align:center; padding:30px; color:var(--text-muted); font-size: 0.9rem;">
-          لا توجد رسائل سابقة. ابدأ المحادثة الآن بإرسال رسالة، صورة، أو تسجيل صوتي (فوكال)!
+          لا توجد رسائل بعد. ابدأ المحادثة الآن بإرسال رسالة نصية، صورة، أو تسجيل صوتي (فوكال)!
         </div>
       `;
     }
@@ -422,25 +794,23 @@ async function openChatWith(username, avatarUrl, isOnline, customTitle = null) {
 
 function updateActiveChatHeaderStatus(isOnline) {
   if (activeRecipient === 'global') {
-    activeChatStatus.textContent = 'مفتوحة للجميع للدردشة والمشاركة';
+    activeChatStatus.textContent = 'غرفة عامة مفتوحة للجميع';
     activeChatStatusIndicator.className = 'status-indicator online';
     return;
   }
   if (isOnline) {
-    activeChatStatus.textContent = 'متصل الآن';
+    activeChatStatus.textContent = 'متصل الآن (Online)';
     activeChatStatusIndicator.className = 'status-indicator online';
   } else {
-    activeChatStatus.textContent = 'غير متصل';
+    activeChatStatus.textContent = 'غير متصل (Offline)';
     activeChatStatusIndicator.className = 'status-indicator';
   }
 }
 
-// Mobile back button
 backToSidebarBtn.addEventListener('click', () => {
   sidebar.classList.remove('hidden');
 });
 
-// Append Message to UI
 function appendMessageToUI(msg) {
   const isOutgoing = msg.sender.toLowerCase() === currentUser.username.toLowerCase();
   
@@ -448,8 +818,6 @@ function appendMessageToUI(msg) {
   row.className = `message-row ${isOutgoing ? 'outgoing' : 'incoming'}`;
 
   let contentHtml = '';
-
-  // Show sender name in Global lounge
   const senderHeader = (!isOutgoing && activeRecipient === 'global')
     ? `<div class="msg-sender-name">${msg.sender}</div>`
     : '';
@@ -524,7 +892,7 @@ messageInput.addEventListener('keydown', (e) => {
   }
 });
 
-// Image Upload & Send
+// Send Image
 imageUploadInput.addEventListener('change', async (e) => {
   if (!activeRecipient) {
     alert('يرجى اختيار شخص من القائمة أولاً');
@@ -556,7 +924,7 @@ imageUploadInput.addEventListener('change', async (e) => {
 });
 
 // -------------------------------------------------------------
-// VOCAL / VOICE NOTE RECORDING LOGIC
+// AUDIO RECORDING (VOCAL)
 // -------------------------------------------------------------
 
 recordVocalBtn.addEventListener('click', async () => {
@@ -569,8 +937,7 @@ recordVocalBtn.addEventListener('click', async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     startRecording(stream);
   } catch (err) {
-    console.error('Microphone error:', err);
-    alert('تعذر الوصول إلى الميكروفون. يرجى السماح للتطبيق باستخدام الميكروفون في المتصفح.');
+    alert('يرجى السماح للتطبيق بالوصول إلى الميكروفون لتسجيل الفوكال');
   }
 });
 
@@ -587,36 +954,24 @@ function startRecording(stream) {
   mediaRecorder = new MediaRecorder(stream, { mimeType });
 
   mediaRecorder.ondataavailable = (e) => {
-    if (e.data.size > 0) {
-      audioChunks.push(e.data);
-    }
+    if (e.data.size > 0) audioChunks.push(e.data);
   };
 
   mediaRecorder.onstop = async () => {
-    // Stop all tracks to release mic
     stream.getTracks().forEach(track => track.stop());
     clearInterval(recordingInterval);
 
-    if (isRecordingCancelled) {
-      audioChunks = [];
-      return;
-    }
-
-    if (audioChunks.length === 0) return;
+    if (isRecordingCancelled || audioChunks.length === 0) return;
 
     const audioBlob = new Blob(audioChunks, { type: mimeType });
     const finalDuration = recordingSeconds;
 
-    // Upload vocal audio
     const formData = new FormData();
-    const extension = mimeType.includes('ogg') ? '.ogg' : (mimeType.includes('mp4') ? '.m4a' : '.webm');
-    formData.append('file', audioBlob, 'vocal_' + Date.now() + extension);
+    const ext = mimeType.includes('ogg') ? '.ogg' : (mimeType.includes('mp4') ? '.m4a' : '.webm');
+    formData.append('file', audioBlob, 'vocal_' + Date.now() + ext);
 
     try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
 
       if (data.url) {
@@ -634,7 +989,6 @@ function startRecording(stream) {
 
   mediaRecorder.start(200);
 
-  // Switch UI to recording bar
   normalControls.style.display = 'none';
   recordingBar.style.display = 'flex';
   recordingTimer.textContent = '00:00';
@@ -741,10 +1095,8 @@ closeLightbox.addEventListener('click', () => {
 });
 
 lightbox.addEventListener('click', (e) => {
-  if (e.target === lightbox) {
-    lightbox.classList.remove('active');
-  }
+  if (e.target === lightbox) lightbox.classList.remove('active');
 });
 
-// START
+// Launch
 init();

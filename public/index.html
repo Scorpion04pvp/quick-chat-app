@@ -8,73 +8,202 @@
   <!-- Google Fonts: Cairo -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body>
+<body data-theme="midnight">
 
-  <!-- LOGIN / PROFILE SETUP OVERLAY -->
-  <div id="loginModal" class="modal-overlay active">
-    <div class="modal-card">
+  <!-- ================= AUTH MODAL (LOGIN / REGISTER) ================= -->
+  <div id="authModal" class="modal-overlay active">
+    <div class="modal-card auth-card">
       <div class="modal-header">
         <div class="app-badge"><i data-lucide="message-square"></i></div>
-        <h2>مرحباً بك في المحادثات!</h2>
-        <p>اكتب اسمك واختر صورتك لتبدأ التحدث فوراً</p>
+        <h2>تطبيق المحادثات الذكية</h2>
+        <p>تواصل مع أصدقائك بالرسائل، الصور، والفوكال الصوتي</p>
       </div>
 
-      <div class="profile-setup">
-        <!-- Selected Avatar Preview -->
-        <div class="avatar-preview-wrapper">
-          <img id="avatarPreview" src="/avatars/avatar-1.svg" alt="الصورة المختارة">
-          <label for="customAvatarInput" class="upload-badge" title="رفع صورة من جهازك">
-            <i data-lucide="camera"></i>
-          </label>
-          <input type="file" id="customAvatarInput" accept="image/*" style="display: none;">
-        </div>
+      <!-- Auth Tabs Switcher -->
+      <div class="auth-tabs">
+        <button id="tabLoginBtn" class="auth-tab-btn active">تسجيل الدخول</button>
+        <button id="tabRegisterBtn" class="auth-tab-btn">إنشاء حساب جديد</button>
+      </div>
 
-        <p class="avatar-hint">اختر صورة جاهزة أو اضغط على الكاميرا لرفع صورتك الشخصية:</p>
-
-        <!-- Avatar Presets -->
-        <div class="avatar-presets">
-          <img src="/avatars/avatar-1.svg" class="preset-img active" data-src="/avatars/avatar-1.svg" alt="أفاتار 1">
-          <img src="/avatars/avatar-2.svg" class="preset-img" data-src="/avatars/avatar-2.svg" alt="أفاتار 2">
-          <img src="/avatars/avatar-3.svg" class="preset-img" data-src="/avatars/avatar-3.svg" alt="أفاتار 3">
-          <img src="/avatars/avatar-4.svg" class="preset-img" data-src="/avatars/avatar-4.svg" alt="أفاتار 4">
-          <img src="/avatars/avatar-5.svg" class="preset-img" data-src="/avatars/avatar-5.svg" alt="أفاتار 5">
-          <img src="/avatars/avatar-6.svg" class="preset-img" data-src="/avatars/avatar-6.svg" alt="أفاتار 6">
-        </div>
-
-        <!-- Name Input -->
+      <!-- LOGIN FORM -->
+      <form id="loginForm" class="auth-form" onsubmit="return false;">
         <div class="input-group">
-          <label for="usernameInput">اسمك (اللقب أو الاسم المستعار):</label>
+          <label>اسم المستخدم (Username):</label>
           <div class="input-field">
             <i data-lucide="user"></i>
-            <input type="text" id="usernameInput" placeholder="اكتب اسمك هنا..." maxlength="25">
+            <input type="text" id="loginUsername" placeholder="اكتب اسم المستخدم..." required autocomplete="username">
           </div>
         </div>
 
-        <button id="loginBtn" class="btn btn-primary btn-block">
-          <span>دخول للمحادثات</span>
+        <div class="input-group">
+          <label>كلمة المرور (Password):</label>
+          <div class="input-field">
+            <i data-lucide="lock"></i>
+            <input type="password" id="loginPassword" placeholder="اكتب كلمة المرور..." required autocomplete="current-password">
+          </div>
+        </div>
+
+        <div id="loginError" class="error-msg"></div>
+
+        <button id="submitLoginBtn" class="btn btn-primary btn-block">
+          <span>دخول إلى حسابي</span>
           <i data-lucide="arrow-left"></i>
         </button>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form id="registerForm" class="auth-form" style="display: none;" onsubmit="return false;">
+        
+        <!-- Avatar Selection -->
+        <div class="avatar-preview-wrapper">
+          <img id="registerAvatarPreview" src="/avatars/avatar-1.svg" alt="الصورة">
+          <label for="registerAvatarFile" class="upload-badge" title="رفع صورة من جهازك">
+            <i data-lucide="camera"></i>
+          </label>
+          <input type="file" id="registerAvatarFile" accept="image/*" style="display: none;">
+        </div>
+
+        <div class="avatar-presets">
+          <img src="/avatars/avatar-1.svg" class="preset-img active" data-src="/avatars/avatar-1.svg" alt="1">
+          <img src="/avatars/avatar-2.svg" class="preset-img" data-src="/avatars/avatar-2.svg" alt="2">
+          <img src="/avatars/avatar-3.svg" class="preset-img" data-src="/avatars/avatar-3.svg" alt="3">
+          <img src="/avatars/avatar-4.svg" class="preset-img" data-src="/avatars/avatar-4.svg" alt="4">
+          <img src="/avatars/avatar-5.svg" class="preset-img" data-src="/avatars/avatar-5.svg" alt="5">
+          <img src="/avatars/avatar-6.svg" class="preset-img" data-src="/avatars/avatar-6.svg" alt="6">
+        </div>
+
+        <div class="input-group">
+          <label>الاسم الظاهر للناس (Display Name):</label>
+          <div class="input-field">
+            <i data-lucide="smile"></i>
+            <input type="text" id="registerDisplayName" placeholder="مثال: يوسف أو الأمير..." maxlength="30">
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>اسم المستخدم للبحث (Username بالإنجليزية أو أرقام):</label>
+          <div class="input-field">
+            <i data-lucide="at-sign"></i>
+            <input type="text" id="registerUsername" placeholder="مثال: youcef99" required autocomplete="username">
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>كلمة المرور (Password):</label>
+          <div class="input-field">
+            <i data-lucide="lock"></i>
+            <input type="password" id="registerPassword" placeholder="كلمة المرور (4 رموز فأكثر)" required autocomplete="new-password">
+          </div>
+        </div>
+
+        <div id="registerError" class="error-msg"></div>
+
+        <button id="submitRegisterBtn" class="btn btn-primary btn-block">
+          <span>إنشاء الحساب وبدء المحادثة</span>
+          <i data-lucide="sparkles"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= USER OWN PROFILE MODAL ================= -->
+  <div id="userProfileModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="app-badge"><i data-lucide="user-check"></i></div>
+        <h3>الملف الشخصي وإعداداتي</h3>
+        <p>معلومات حسابك وخيارات المظهر</p>
+      </div>
+
+      <div class="profile-card-content">
+        <!-- Avatar Edit -->
+        <div class="avatar-preview-wrapper">
+          <img id="myProfileAvatar" src="/avatars/avatar-1.svg" alt="صورتي">
+          <label for="editMyAvatarFile" class="upload-badge" title="تغيير صورتي">
+            <i data-lucide="camera"></i>
+          </label>
+          <input type="file" id="editMyAvatarFile" accept="image/*" style="display: none;">
+        </div>
+
+        <!-- User ID Badge (With 1-click copy) -->
+        <div class="user-id-box">
+          <span class="id-label">رمز المعرف الخاص بك (User ID):</span>
+          <div class="id-display">
+            <strong id="myUserIdBadge">ID-00000</strong>
+            <button id="copyMyIdBtn" class="btn-copy" title="نسخ المعرف لإرساله لصديق">
+              <i data-lucide="copy"></i>
+              <span>نسخ</span>
+            </button>
+          </div>
+          <small class="id-note">أعطِ هذا الرمز لصديقك ليتمكن من إضافتك فوراً!</small>
+        </div>
+
+        <!-- Edit Display Name -->
+        <div class="input-group">
+          <label>تعديل اسمك الظاهر:</label>
+          <div class="input-field">
+            <i data-lucide="edit-3"></i>
+            <input type="text" id="myDisplayNameInput" placeholder="اسمك الجديد...">
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="saveProfileBtn" class="btn btn-primary">حفظ التعديلات</button>
+          <button id="closeProfileBtn" class="btn btn-secondary">إغلاق</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- ADD CONTACT MODAL -->
+  <!-- ================= CONTACT PROFILE MODAL (VIEW OTHERS) ================= -->
+  <div id="contactProfileModal" class="modal-overlay">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <div class="avatar-preview-wrapper">
+          <img id="viewContactAvatar" src="/avatars/avatar-1.svg" alt="الصديق">
+        </div>
+        <h3 id="viewContactName">اسم الصديق</h3>
+        <span id="viewContactStatusBadge" class="status-badge online">متصل الآن</span>
+      </div>
+
+      <div class="profile-details-list">
+        <div class="profile-detail-row">
+          <span>اسم المستخدم (Username):</span>
+          <strong id="viewContactUsername">---</strong>
+        </div>
+        <div class="profile-detail-row">
+          <span>رمز المعرف (User ID):</span>
+          <strong id="viewContactUserId">---</strong>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="justify-content: space-between; margin-top: 20px;">
+        <button id="deleteChatFromProfileBtn" class="btn btn-danger">
+          <i data-lucide="trash-2"></i>
+          <span>حذف المحادثة</span>
+        </button>
+        <button id="closeContactProfileBtn" class="btn btn-secondary">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ADD FRIEND MODAL (BY ID OR USERNAME) ================= -->
   <div id="addContactModal" class="modal-overlay">
     <div class="modal-card modal-small">
       <div class="modal-header">
         <div class="app-badge"><i data-lucide="user-plus"></i></div>
-        <h3>إضافة شخص جديد</h3>
-        <p>اكتب اسم المستخدم للتحدث معه</p>
+        <h3>إضافة صديق جديد</h3>
+        <p>أدخل رمز المعرف (User ID) أو اسم المستخدم</p>
       </div>
 
       <div class="input-group">
         <div class="input-field">
           <i data-lucide="search"></i>
-          <input type="text" id="newContactInput" placeholder="اسم الشخص (مثال: ahmed)...">
+          <input type="text" id="newContactInput" placeholder="مثال: ID-48291 أو ahmed...">
         </div>
       </div>
 
@@ -82,49 +211,118 @@
 
       <div class="modal-actions">
         <button id="cancelAddContactBtn" class="btn btn-secondary">إلغاء</button>
-        <button id="confirmAddContactBtn" class="btn btn-primary">إضافة وبدء المحادثة</button>
+        <button id="confirmAddContactBtn" class="btn btn-primary">بحث وإضافة</button>
       </div>
     </div>
   </div>
 
-  <!-- LIGHTBOX FOR IMAGES -->
+  <!-- ================= CHAT SETTINGS & THEMES MODAL ================= -->
+  <div id="chatSettingsModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="app-badge"><i data-lucide="palette"></i></div>
+        <h3>إعدادات المظهر والخلفية</h3>
+        <p>خصص شكل المحادثة والثيم على ذوقك</p>
+      </div>
+
+      <!-- Theme Selector -->
+      <div class="settings-section">
+        <label class="settings-title">اختر ثيم الواجهة (Theme):</label>
+        <div class="themes-grid">
+          <button class="theme-option active" data-theme-val="midnight">
+            <span class="theme-color" style="background: #6366f1;"></span>
+            <span>سماء الليل (Midnight)</span>
+          </button>
+          <button class="theme-option" data-theme-val="ocean">
+            <span class="theme-color" style="background: #0284c7;"></span>
+            <span>المحيط الأزرق (Ocean)</span>
+          </button>
+          <button class="theme-option" data-theme-val="emerald">
+            <span class="theme-color" style="background: #059669;"></span>
+            <span>الزمرد الأخضر (Emerald)</span>
+          </button>
+          <button class="theme-option" data-theme-val="purple">
+            <span class="theme-color" style="background: #9333ea;"></span>
+            <span>البنفسجي الملكي (Purple)</span>
+          </button>
+          <button class="theme-option" data-theme-val="neon">
+            <span class="theme-color" style="background: #ec4899;"></span>
+            <span>سايبر نيون (Cyberpunk)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Chat Wallpaper Selector -->
+      <div class="settings-section">
+        <label class="settings-title">خلفية المحادثة (Chat Wallpaper):</label>
+        <div class="wallpaper-actions">
+          <label for="wallpaperUploadInput" class="btn btn-secondary btn-block">
+            <i data-lucide="image"></i>
+            <span>رفع صورة كخلفية للمحادثة</span>
+          </label>
+          <input type="file" id="wallpaperUploadInput" accept="image/*" style="display: none;">
+          <button id="resetWallpaperBtn" class="btn btn-secondary">إعادة ضبط</button>
+        </div>
+      </div>
+
+      <!-- Delete Chat Danger Zone -->
+      <div class="settings-section danger-zone">
+        <label class="settings-title" style="color: #ef4444;">خيارات المحادثة الحالية:</label>
+        <button id="deleteChatBtn" class="btn btn-danger btn-block">
+          <i data-lucide="trash-2"></i>
+          <span>حذف جميع رسائل هذه المحادثة</span>
+        </button>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 20px;">
+        <button id="closeChatSettingsBtn" class="btn btn-primary btn-block">تم / حفظ الإعدادات</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= LIGHTBOX FOR IMAGES ================= -->
   <div id="lightbox" class="lightbox">
     <button class="lightbox-close" id="closeLightbox"><i data-lucide="x"></i></button>
     <img id="lightboxImg" src="" alt="عرض الصورة">
   </div>
 
-  <!-- MAIN APP CONTAINER -->
+  <!-- ================= MAIN APPLICATION ================= -->
   <div class="app-container">
     
-    <!-- SIDEBAR (CONTACTS & PROFILE) -->
+    <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
       
-      <!-- Current User Header -->
-      <div class="sidebar-user">
+      <!-- Current User Profile Card -->
+      <div class="sidebar-user" id="openMyProfileBtn" title="انقر لتعديل ملفك الشخصي ومعرفة معرفك">
         <div class="user-info">
           <div class="avatar-container">
             <img id="currentUserAvatar" src="/avatars/avatar-1.svg" alt="أنا">
             <span class="status-indicator online"></span>
           </div>
           <div class="user-details">
-            <h4 id="currentUserName">جاري التحميل...</h4>
-            <span class="user-tag">متصل</span>
+            <h4 id="currentUserName">اسم المستخدم</h4>
+            <span class="user-tag" id="currentUserTag">ID-00000</span>
           </div>
         </div>
-        <button id="logoutBtn" class="btn-icon" title="تغيير الحساب">
-          <i data-lucide="log-out"></i>
-        </button>
+        <div class="sidebar-header-btns">
+          <button id="quickSettingsBtn" class="btn-icon" title="إعدادات المظهر والثيم">
+            <i data-lucide="palette"></i>
+          </button>
+          <button id="logoutBtn" class="btn-icon" title="تسجيل الخروج">
+            <i data-lucide="log-out"></i>
+          </button>
+        </div>
       </div>
 
-      <!-- Action: Add Contact Button -->
+      <!-- Add Friend Button -->
       <div class="sidebar-actions">
         <button id="openAddContactBtn" class="btn btn-add">
           <i data-lucide="user-plus"></i>
-          <span>إضافة شخص جديد</span>
+          <span>إضافة صديق برمز المعرف</span>
         </button>
       </div>
 
-      <!-- Search Contacts / Room Switcher -->
+      <!-- Tabs: Contacts vs Global Lounge -->
       <div class="chat-tabs">
         <button class="tab-btn active" data-tab="contacts">
           <i data-lucide="users"></i> جهات الاتصال
@@ -145,7 +343,7 @@
       
       <!-- Chat Header -->
       <header class="chat-header">
-        <div class="chat-header-contact">
+        <div class="chat-header-contact" id="chatHeaderContactInfo" title="انقر لعرض ملف الصديق">
           <button id="backToSidebarBtn" class="btn-icon mobile-only" title="رجوع">
             <i data-lucide="arrow-right"></i>
           </button>
@@ -158,17 +356,30 @@
             <span id="activeChatStatus" class="contact-status-text">انقر على شخص من القائمة للبدء</span>
           </div>
         </div>
+
+        <!-- Header Actions -->
+        <div class="chat-header-actions" id="chatHeaderActions" style="display: none;">
+          <button id="openChatThemeSettingsBtn" class="btn-icon" title="تغيير الثيم وخلفية المحادثة">
+            <i data-lucide="palette"></i>
+          </button>
+          <button id="viewProfileFromHeaderBtn" class="btn-icon" title="عرض الملف الشخصي">
+            <i data-lucide="user"></i>
+          </button>
+          <button id="quickDeleteChatBtn" class="btn-icon" title="حذف المحادثة">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
       </header>
 
-      <!-- Messages Viewport -->
+      <!-- Messages Viewport (With custom wallpaper support) -->
       <div class="messages-viewport" id="messagesViewport">
         <div class="no-chat-placeholder" id="noChatPlaceholder">
           <div class="placeholder-icon"><i data-lucide="message-circle"></i></div>
           <h3>ابدأ المحادثة الآن!</h3>
-          <p>اختر شخصاً من القائمة الجانبية أو أضف شخصاً جديداً بالاسم لتبادل الرسائل والصور والتسجيلات الصوتية (الفوكال).</p>
+          <p>اختر شخصاً من القائمة الجانبية أو أضف صديقك برمز المعرف (User ID) للتحدث بالرسائل، الصور، والفوكال.</p>
         </div>
         <div class="messages-list" id="messagesList" style="display: none;">
-          <!-- Dynamically populated messages -->
+          <!-- Messages -->
         </div>
       </div>
 
@@ -181,9 +392,7 @@
       <!-- Chat Input Area -->
       <footer class="chat-input-bar" id="chatInputBar">
         
-        <!-- Normal Input State -->
         <div class="input-controls" id="normalControls">
-          
           <!-- Image Attachment -->
           <label for="imageUploadInput" class="btn-icon" title="إرسال صورة">
             <i data-lucide="image"></i>
@@ -204,7 +413,7 @@
           </button>
         </div>
 
-        <!-- Vocal Recording State (Shown while recording) -->
+        <!-- Recording Bar -->
         <div class="recording-bar" id="recordingBar" style="display: none;">
           <div class="recording-info">
             <span class="recording-dot"></span>
@@ -231,9 +440,7 @@
 
   </div>
 
-  <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
-  <!-- App JS -->
   <script src="app.js"></script>
 </body>
 </html>
